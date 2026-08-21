@@ -10,6 +10,10 @@
   # https://devenv.sh/languages/
   # languages.rust.enable = true;
 
+  languages.r = {
+    enable = true;
+  };
+
   # https://devenv.sh/processes/
   # processes.dev.exec = "${lib.getExe pkgs.watchexec} -n -- ls -la";
 
@@ -25,6 +29,7 @@
   enterShell = ''
     hello         # Run scripts directly
     git --version # Use packages
+    R --version
   '';
 
   # https://devenv.sh/tasks/
@@ -37,6 +42,7 @@
   enterTest = ''
     echo "Running tests"
     git --version | grep --color=auto "${pkgs.git.version}"
+    R -- version
   '';
 
   # https://devenv.sh/git-hooks/
