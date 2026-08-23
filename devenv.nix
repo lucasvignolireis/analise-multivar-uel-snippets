@@ -10,8 +10,14 @@
   # https://devenv.sh/languages/
   # languages.rust.enable = true;
 
-  languages.r = {
-    enable = true;
+  languages = {
+    r = {
+      enable = true;
+    };
+
+    python = {
+      enable = true;
+    };
   };
 
   # https://devenv.sh/processes/
@@ -30,6 +36,7 @@
     hello         # Run scripts directly
     git --version # Use packages
     R --version
+    python --version
   '';
 
   # https://devenv.sh/tasks/
@@ -43,6 +50,7 @@
     echo "Running tests"
     git --version | grep --color=auto "${pkgs.git.version}"
     R -- version
+    python --version
   '';
 
   # https://devenv.sh/git-hooks/
