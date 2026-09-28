@@ -35,7 +35,7 @@
       venv = {
         enable = true;
         requirements = ''
-          scypy
+          scipy
           numpy
           matplotlib
           pandas
@@ -43,6 +43,7 @@
           statsmodels
           plotly
           seaborn
+          shiny
         '';
       };
     };
