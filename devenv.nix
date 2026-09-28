@@ -8,6 +8,17 @@
   packages = [ 
     pkgs.git 
     pkgs.rPackages.renv
+    pkgs.rPackages.rJava
+    pkgs.rPackages.xlsx
+    pkgs.rPackages.writexl
+    pkgs.rPackages.devtools
+    pkgs.rPackages.webr
+    pkgs.rPackages.outliers
+    pkgs.rPackages.mdatools
+    pkgs.rPackages.magrittr
+    pkgs.rPackages.ggplot2
+    pkgs.rPackages.readxl
+    pkgs.rPackages.openxlsx
   ];
 
   # https://devenv.sh/languages/
