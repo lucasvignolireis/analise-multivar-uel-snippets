@@ -31,6 +31,20 @@
 
     python = {
       enable = true;
+      package = pkgs.python3;
+      venv = {
+        enable = true;
+        requirements = ''
+          scypy
+          numpy
+          matplotlib
+          pandas
+          scikit-learn
+          statsmodels
+          plotly
+          seaborn
+        '';
+      };
     };
   };
 
