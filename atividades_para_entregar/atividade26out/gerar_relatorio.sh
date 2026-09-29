@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 INPUT="relatorios/hello_world.typ"
 OUTPUT="relatorios/gerados/hello_world.pdf"
 
-echo "Gerando um relatório de teste baseado em relatorios/gerados/hello_world.typ"
+echo "Gerando um relatório de teste baseado no aqruivo em '$INPUT'"
 echo "comando usado typst compile \"$INPUT\" \"$OUTPUT\""
 
 unset SOURCE_DATE_EPOCH
