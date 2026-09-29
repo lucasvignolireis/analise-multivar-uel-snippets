@@ -6,7 +6,8 @@
 
   # https://devenv.sh/packages/
   packages = [ 
-    pkgs.git 
+    pkgs.git
+    pkgs.typst
     pkgs.rPackages.renv
     pkgs.rPackages.rJava
     pkgs.rPackages.xlsx
