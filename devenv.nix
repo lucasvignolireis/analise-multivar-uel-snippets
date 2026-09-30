@@ -45,6 +45,7 @@
           plotly
           seaborn
           shiny
+          jinja2
         '';
       };
     };
