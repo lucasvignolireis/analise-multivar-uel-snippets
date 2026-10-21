@@ -7,7 +7,7 @@ from wizard_com_csv.estado_wizard import (
     estado_inicial_wizard
 )
 from wizard_com_csv.etapa_arquivo import (
-    etapa_arquivo_ui #, etapa_arquivo_server
+    etapa_arquivo_ui, etapa_arquivo_server
 )
 
 app_ui = ui.page_fluid(
@@ -35,7 +35,7 @@ def server(input, output, session):
         }[atual]
 
         return ui.navset_tab(
-            ui.nav_panel(t1, ui.p("Lorem Ipsum da etapa de arquivo")),
+            ui.nav_panel(t1, etapa_arquivo_ui("arquivo_step")),
             ui.nav_panel(t2, ui.p("Passo 2 virá em seguida.")),
             ui.nav_panel(t3, ui.p("Passo 3 virá em seguida.")),
             id="wizard_tabs",
@@ -45,6 +45,8 @@ def server(input, output, session):
     @render.code
     def estado_wizard_json():
         return json.dumps(estado_wizard(), indent=2, ensure_ascii=False)
+
+    etapa_arquivo_server("arquivo_step", estado_wizard=estado_wizard)
 
 
 app = App(app_ui, server)
