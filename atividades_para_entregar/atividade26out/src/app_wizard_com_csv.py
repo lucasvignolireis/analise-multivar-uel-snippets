@@ -12,6 +12,9 @@ from wizard_com_csv.etapa_arquivo import (
 from wizard_com_csv.etapa_tabela import (
     etapa_tabela_ui, etapa_tabela_server
 )
+from wizard_com_csv.etapa_relatorio import (
+    etapa_relatorio_server, etapa_relatorio_ui
+)
 
 app_ui = ui.page_fluid(
     ui.h2("Teste: abrir CSV e gerar relatório"),
@@ -45,7 +48,7 @@ def server(input, output, session):
         return ui.navset_tab(
             ui.nav_panel(t1, etapa_arquivo_ui("etapa_arquivo")),
             ui.nav_panel(t2, etapa_tabela_ui("etapa_tabela")),
-            ui.nav_panel(t3, ui.p("Passo 3 virá em seguida.")),
+            ui.nav_panel(t3, etapa_relatorio_ui("etapa_relatorio")),
             id="wizard_tabs",
             selected=selected,
        )
@@ -56,6 +59,7 @@ def server(input, output, session):
 
     etapa_arquivo_server("etapa_arquivo", estado_wizard=estado_wizard)
     etapa_tabela_server("etapa_tabela", estado_wizard=estado_wizard)
+    etapa_relatorio_server("etapa_relatorio", estado_wizard=estado_wizard)
 
 
 app = App(app_ui, server)
