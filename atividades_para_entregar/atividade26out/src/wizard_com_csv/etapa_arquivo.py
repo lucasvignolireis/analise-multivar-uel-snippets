@@ -9,6 +9,17 @@ def etapa_arquivo_ui():
     return ui.card(
         ui.h4("Passo 1: Escolha um dos arquivos que está na pasta '/dados'"),
         ui.output_ui("seletor_arquivo_ui"),
+        ui.input_select(
+            "separador",
+            "Separador:",
+            choices={
+                ",": "Vírgula (,)",
+                ";": "Ponto e vírgula (;)",
+                "\t": r"Tab (\t)",
+                "|": "Pipe (|)",
+            },
+            selected=",",
+        ),
         ui.output_text("status_arquivo"),
         ui.input_action_button("escolher_arquivo", "Usar este arquivo"),
     )
@@ -73,12 +84,17 @@ def etapa_arquivo_server(input, output, session, *, estado_wizard):
         if not nome:
             return
 
+        separador = input.separador()
+        if separador is None:
+            separador = ","
+
         caminho = (pasta / nome).resolve()
         if not caminho.exists():
             return
 
         s = deepcopy(estado_wizard())
         s["passos"]["arquivo"]["dados"]["path_arquivo"] = str(caminho)
+        s["passos"]["arquivo"]["dados"]["separador"] = separador
         s["passos"]["arquivo"]["estado"] = "preenchido"
 
         # libera próximo passo
