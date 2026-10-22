@@ -16,6 +16,9 @@ from wizard_com_csv.etapa_relatorio import (
     etapa_relatorio_server, etapa_relatorio_ui
 )
 
+BASE_DIR = Path(__file__).resolve().parent.parent      # /
+OUTPUTS_DIR = BASE_DIR / "outputs"
+
 app_ui = ui.page_fluid(
     ui.h2("Teste: abrir CSV e gerar relatório"),
     ui.tags.style("""
@@ -62,5 +65,9 @@ def server(input, output, session):
     etapa_relatorio_server("etapa_relatorio", estado_wizard=estado_wizard)
 
 
-app = App(app_ui, server)
+app = App(
+    app_ui,
+    server,
+    static_assets={"/outputs": str(OUTPUTS_DIR)}, 
+)
 
