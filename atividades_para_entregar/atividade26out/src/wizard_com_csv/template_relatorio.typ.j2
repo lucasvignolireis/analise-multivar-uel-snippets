@@ -1,20 +1,62 @@
-#set page(margin: 2cm)
-#set text(lang: "pt")
+#import "@preview/codly:1.3.0": *
+
+#show: codly-init.with()
+
+#set page(
+  margin: (x: 2.2cm, y: 2cm),
+)
+
+#set text(
+  lang: "pt",
+  size: 11pt,
+)
+
+#let linha(label, valor) = [
+  *#label:* #valor \
+]
 
 = Relatório CSV
 
-== Fonte
-- Arquivo: "{{ arquivo_path }}"
-- Separador: "{{ separador }}"
-- Linhas: {{ n_linhas }}
-- Colunas: {{ n_colunas }}
+== Fonte de dados
+
+#linha("Arquivo", "{{ arquivo_path }}")
+#linha("Separador", "{{ separador }}")
+#linha("Linhas", "{{ n_linhas }}")
+#linha("Colunas", "{{ n_colunas }}")
 
 == Configuração do gráfico
-- Eixo X: {{ col_x_label }}
-- Eixos Y:
+
+#linha("Eixo X", "{{ col_x_label }}")
+
+*Eixos Y:*
 {% for y in cols_y %}
-  - {{ y }}
+- {{ y }}
 {% endfor %}
 
-== Scatter plot
-#image("{{ scatter_nome }}", width: 85%)
+== Resultado
+
+#figure(
+  image("{{ scatter_nome }}", width: 90%),
+  caption: [Scatter plot gerado a partir do CSV],
+)
+
+#pagebreak()
+
+= Anexos — Código fonte
+
+Este anexo foi inserido automaticamente no relatório.
+
+== Anexo A — `wizard_com_csv/etapa_tabela.py` (completo)
+
+```python
+{{ source("wizard_com_csv/etapa_tabela.py") }}
+```
+
+#pagebreak()
+
+== Anexo B — trecho de `wizard_com_csv/etapa_tabela.py` (linhas 120–260)
+
+#codly(number-format: n => str(n + 119))
+```python
+{{ source("wizard_com_csv/etapa_tabela.py", 120, 260) }}
+```
