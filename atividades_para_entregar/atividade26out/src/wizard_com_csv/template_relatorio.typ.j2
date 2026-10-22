@@ -1,0 +1,20 @@
+#set page(margin: 2cm)
+#set text(lang: "pt")
+
+= Relatório CSV
+
+== Fonte
+- Arquivo: "{{ arquivo_path }}"
+- Separador: "{{ separador }}"
+- Linhas: {{ n_linhas }}
+- Colunas: {{ n_colunas }}
+
+== Configuração do gráfico
+- Eixo X: {{ col_x_label }}
+- Eixos Y:
+{% for y in cols_y %}
+  - {{ y }}
+{% endfor %}
+
+== Scatter plot
+#image("{{ scatter_nome }}", width: 85%)
