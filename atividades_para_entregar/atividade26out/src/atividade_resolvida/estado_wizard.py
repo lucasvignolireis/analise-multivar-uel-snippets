@@ -11,12 +11,14 @@ def estado_inicial_wizard():
                     "extensoes": ["csv", "tsv"],
                 },
                 "dados": {
-                    "xvalid_path": None,
+                    "xvalid_path": "Xvalid.csv",
                     "xvalid_sep": ",",
-                    "xcalib_path": None,
+                    "xcalib_path": "Xcalib.csv",
                     "xcalib_sep": ",",
-                    "path_arquivo": None,
-                    "separador": ",",
+                    "yvalid_path": "Yvalid.csv",
+                    "yvalid_sep": ",",
+                    "ycalib_path": "Ycalib.csv",
+                    "ycalib_sep": ",",
                 },
             },
             "tabela": {

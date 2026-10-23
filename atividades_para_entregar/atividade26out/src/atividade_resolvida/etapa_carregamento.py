@@ -3,6 +3,13 @@ from pathlib import Path
 
 from shiny import module, ui, render, reactive
 
+SEPARADORES = {
+    ",": "Vírgula (,)",
+    ";": "Ponto e vírgula (;)",
+    "\t": r"Tab (\t)",
+    "|": "Pipe (|)",
+}
+
 
 @module.ui
 def etapa_carregamento_ui():
@@ -15,12 +22,7 @@ def etapa_carregamento_ui():
         ui.input_select(
             "separador_xvalid",
             "Separador:",
-            choices={
-                ",": "Vírgula (,)",
-                ";": "Ponto e vírgula (;)",
-                "\t": r"Tab (\t)",
-                "|": "Pipe (|)",
-            },
+            choices=SEPARADORES,
             selected=",",
         ),
 
@@ -32,12 +34,31 @@ def etapa_carregamento_ui():
         ui.input_select(
             "separador_xcalib",
             "Separador:",
-            choices={
-                ",": "Vírgula (,)",
-                ";": "Ponto e vírgula (;)",
-                "\t": r"Tab (\t)",
-                "|": "Pipe (|)",
-            },
+            choices=SEPARADORES,
+            selected=",",
+        ),
+
+        ui.hr(),
+
+        ui.h5("Conjunto de validação (Y)"),
+        ui.p("CSV com as concentrações de referência das amostras de validação."),
+        ui.output_ui("seletor_yvalid_ui"),
+        ui.input_select(
+            "separador_yvalid",
+            "Separador:",
+            choices=SEPARADORES,
+            selected=",",
+        ),
+
+        ui.hr(),
+
+        ui.h5("Conjunto de calibração (Y)"),
+        ui.p("CSV com as concentrações das 44 amostras simuladas."),
+        ui.output_ui("seletor_ycalib_ui"),
+        ui.input_select(
+            "separador_ycalib",
+            "Separador:",
+            choices=SEPARADORES,
             selected=",",
         ),
 
@@ -71,39 +92,37 @@ def etapa_carregamento_server(input, output, session, *, estado_wizard):
         nomes = sorted([p.name for p in arquivos])
         return pasta, nomes
 
-    @render.ui
-    def seletor_xvalid_ui():
+    def _seletor(input_id: str, dica: str):
         pasta, arquivos = _listar_arquivos()
 
         if not arquivos:
             return ui.p(f"A pasta '{pasta}' não tem arquivos do tipo especificado.")
 
-        # tenta pré-selecionar Xvalid, se existir
-        selected = next((n for n in arquivos if "xvalid" in n.lower()), arquivos[0])
+        # tenta pré-selecionar pelo nome, se existir
+        selected = next((n for n in arquivos if dica in n.lower()), arquivos[0])
 
         return ui.input_select(
-            "xvalid_escolhido",
+            input_id,
             "Arquivo:",
             choices=arquivos,
             selected=selected,
         )
+
+    @render.ui
+    def seletor_xvalid_ui():
+        return _seletor("xvalid_escolhido", "xvalid")
 
     @render.ui
     def seletor_xcalib_ui():
-        pasta, arquivos = _listar_arquivos()
+        return _seletor("xcalib_escolhido", "xcalib")
 
-        if not arquivos:
-            return ui.p(f"A pasta '{pasta}' não tem arquivos do tipo especificado.")
+    @render.ui
+    def seletor_yvalid_ui():
+        return _seletor("yvalid_escolhido", "yvalid")
 
-        # tenta pré-selecionar Xcalib, se existir
-        selected = next((n for n in arquivos if "xcalib" in n.lower()), arquivos[0])
-
-        return ui.input_select(
-            "xcalib_escolhido",
-            "Arquivo:",
-            choices=arquivos,
-            selected=selected,
-        )
+    @render.ui
+    def seletor_ycalib_ui():
+        return _seletor("ycalib_escolhido", "ycalib")
 
     @render.text
     def status_carregamento():
@@ -112,11 +131,16 @@ def etapa_carregamento_server(input, output, session, *, estado_wizard):
 
         xvalid = dados.get("xvalid_path")
         xcalib = dados.get("xcalib_path")
+        yvalid = dados.get("yvalid_path")
+        ycalib = dados.get("ycalib_path")
 
-        if not xvalid or not xcalib:
+        if not (xvalid and xcalib and yvalid and ycalib):
             return "Nenhum conjunto confirmado ainda."
 
-        return f"Xvalid: {xvalid} | Xcalib: {xcalib}"
+        return (
+            f"Xvalid: {xvalid} | Xcalib: {xcalib} | "
+            f"Yvalid: {yvalid} | Ycalib: {ycalib}"
+        )
 
     @reactive.effect
     @reactive.event(input.confirmar_carregamento)
@@ -127,17 +151,26 @@ def etapa_carregamento_server(input, output, session, *, estado_wizard):
 
         nome_xvalid = input.xvalid_escolhido()
         nome_xcalib = input.xcalib_escolhido()
+        nome_yvalid = input.yvalid_escolhido()
+        nome_ycalib = input.ycalib_escolhido()
 
-        if not nome_xvalid or not nome_xcalib:
+        if not (nome_xvalid and nome_xcalib and nome_yvalid and nome_ycalib):
             return
 
         sep_xvalid = input.separador_xvalid() or ","
         sep_xcalib = input.separador_xcalib() or ","
+        sep_yvalid = input.separador_yvalid() or ","
+        sep_ycalib = input.separador_ycalib() or ","
 
         caminho_xvalid = (pasta / nome_xvalid).resolve()
         caminho_xcalib = (pasta / nome_xcalib).resolve()
+        caminho_yvalid = (pasta / nome_yvalid).resolve()
+        caminho_ycalib = (pasta / nome_ycalib).resolve()
 
-        if not caminho_xvalid.exists() or not caminho_xcalib.exists():
+        if not all(
+            c.exists()
+            for c in (caminho_xvalid, caminho_xcalib, caminho_yvalid, caminho_ycalib)
+        ):
             return
 
         s = deepcopy(estado_wizard())
@@ -147,6 +180,10 @@ def etapa_carregamento_server(input, output, session, *, estado_wizard):
         d["xvalid_sep"] = sep_xvalid
         d["xcalib_path"] = caminho_xcalib.relative_to(pasta).as_posix()
         d["xcalib_sep"] = sep_xcalib
+        d["yvalid_path"] = caminho_yvalid.relative_to(pasta).as_posix()
+        d["yvalid_sep"] = sep_yvalid
+        d["ycalib_path"] = caminho_ycalib.relative_to(pasta).as_posix()
+        d["ycalib_sep"] = sep_ycalib
 
         s["passos"]["carregamento"]["estado"] = "preenchido"
 
