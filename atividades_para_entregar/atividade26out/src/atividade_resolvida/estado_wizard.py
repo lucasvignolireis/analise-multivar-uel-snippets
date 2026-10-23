@@ -1,21 +1,20 @@
 def estado_inicial_wizard():
     return {
-        "etapa_atual": "arquivo",
-
-        "ordem": ["arquivo", "tabela", "relatorio"],
+        "etapa_atual": "carregamento",
+        "ordem": ["carregamento", "tabela", "relatorio"],
         "passos": {
-            "arquivo": {
-                "titulo": "Arquivo:",
+            "carregamento": {
+                "titulo": "Carregamento dos dados",
                 "estado": "vazio",   # vazio | em_processo | preenchido
-                "conf": { # configuracoes do comportamento do script
+                "conf": {
                     "path": "dados/",
-                    "extensoes": [
-                        "csv",
-                        "tsv"
-                    ],
+                    "extensoes": ["csv", "tsv"],
                 },
-                "dados": { # dados dinamicos, inclui preenchidos pelo usuário e também dados relevantes pro estado da interface específicos dessa etapa
-                           # achei que não valia a pena subdividir ainda mais entre inputs do usuário e estado efemero da interface
+                "dados": {
+                    "xvalid_path": None,
+                    "xvalid_sep": ",",
+                    "xcalib_path": None,
+                    "xcalib_sep": ",",
                     "path_arquivo": None,
                     "separador": ",",
                 },
@@ -26,7 +25,7 @@ def estado_inicial_wizard():
                 "conf": {},
                 "dados": {
                     "cabecalho": [],
-                    "n_linhas": 0, 
+                    "n_linhas": 0,
                     "colunas": [],
                 },
             },
@@ -34,8 +33,8 @@ def estado_inicial_wizard():
                 "titulo": "Relatório",
                 "estado": "vazio",
                 "conf": {
-                    "path_template": "", # path de um template Typst (pensei em fazer algo com simples substituição de string com um dict)
-                    "path_registro_automatico": None # preencher quando quiser que cada rodada seja registrada
+                    "path_template": "",
+                    "path_registro_automatico": None,
                 },
                 "dados": {
                     "arquivo_gerado": None,

@@ -6,8 +6,8 @@ from shiny import App, ui, reactive, render
 from atividade_resolvida.estado_wizard import (
     estado_inicial_wizard
 )
-from atividade_resolvida.etapa_arquivo import (
-    etapa_arquivo_ui, etapa_arquivo_server
+from atividade_resolvida.etapa_carregamento import (
+    etapa_carregamento_ui, etapa_carregamento_server
 )
 from atividade_resolvida.etapa_tabela import (
     etapa_tabela_ui, etapa_tabela_server
@@ -37,19 +37,19 @@ def server(input, output, session):
     def abas_wizard():
         s = estado_wizard()
 
-        t1 = s["passos"]["arquivo"]["titulo"]
+        t1 = s["passos"]["carregamento"]["titulo"]
         t2 = s["passos"]["tabela"]["titulo"]
         t3 = s["passos"]["relatorio"]["titulo"]
 
         atual = s["etapa_atual"]
         selected = {
-            "arquivo": t1,
+            "carregamento": t1,
             "tabela": t2,
             "relatorio": t3,
         }[atual]
 
         return ui.navset_tab(
-            ui.nav_panel(t1, etapa_arquivo_ui("etapa_arquivo")),
+            ui.nav_panel(t1, etapa_carregamento_ui("etapa_carregamento")),
             ui.nav_panel(t2, etapa_tabela_ui("etapa_tabela")),
             ui.nav_panel(t3, etapa_relatorio_ui("etapa_relatorio")),
             id="wizard_tabs",
@@ -60,7 +60,7 @@ def server(input, output, session):
     def estado_wizard_json():
         return json.dumps(estado_wizard(), indent=2, ensure_ascii=False)
 
-    etapa_arquivo_server("etapa_arquivo", estado_wizard=estado_wizard)
+    etapa_carregamento_server("etapa_carregamento", estado_wizard=estado_wizard)
     etapa_tabela_server("etapa_tabela", estado_wizard=estado_wizard)
     etapa_relatorio_server("etapa_relatorio", estado_wizard=estado_wizard)
 

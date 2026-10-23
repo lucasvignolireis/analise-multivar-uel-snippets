@@ -5,7 +5,7 @@ from shiny import module, ui, render, reactive
 
 
 @module.ui
-def etapa_arquivo_ui():
+def etapa_carregamento_ui():
     return ui.card(
         ui.h4("Passo 1: Escolha um dos arquivos que está na pasta '/dados'"),
         ui.output_ui("seletor_arquivo_ui"),
@@ -25,14 +25,14 @@ def etapa_arquivo_ui():
     )
 
 @module.server
-def etapa_arquivo_server(input, output, session, *, estado_wizard):
-    # Este arquivo está em src/atividade_resolvida/etapa_arquivo.py
+def etapa_carregamento_server(input, output, session, *, estado_wizard):
+    # Este arquivo está em src/atividade_resolvida/etapa_carregamento.py
     # parent.parent => src/
     BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
     def _listar_arquivos():
         s = estado_wizard()
-        conf = s["passos"]["arquivo"]["conf"]
+        conf = s["passos"]["carregamento"]["conf"]
 
         path_rel = conf.get("path", "dados/")
         extensoes = conf.get("extensoes", ["csv"])
@@ -67,7 +67,7 @@ def etapa_arquivo_server(input, output, session, *, estado_wizard):
     @render.text
     def status_arquivo():
         s = estado_wizard()
-        path_arquivo_salvo = s["passos"]["arquivo"]["dados"].get("path_arquivo")
+        path_arquivo_salvo = s["passos"]["carregamento"]["dados"].get("path_arquivo")
 
         if not path_arquivo_salvo:
             return "Nenhum arquivo escolhido ainda."
@@ -93,9 +93,9 @@ def etapa_arquivo_server(input, output, session, *, estado_wizard):
             return
 
         s = deepcopy(estado_wizard())
-        s["passos"]["arquivo"]["dados"]["path_arquivo"] = str(caminho)
-        s["passos"]["arquivo"]["dados"]["separador"] = separador
-        s["passos"]["arquivo"]["estado"] = "preenchido"
+        s["passos"]["carregamento"]["dados"]["path_arquivo"] = str(caminho)
+        s["passos"]["carregamento"]["dados"]["separador"] = separador
+        s["passos"]["carregamento"]["estado"] = "preenchido"
 
         # libera próximo passo
         s["passos"]["tabela"]["estado"] = "em_processo"

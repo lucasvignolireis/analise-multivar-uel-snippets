@@ -40,7 +40,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
 
     @reactive.calc
     def _fonte():
-        dados = estado_wizard()["passos"]["arquivo"]["dados"]
+        dados = estado_wizard()["passos"]["carregamento"]["dados"]
         return dados.get("path_arquivo"), dados.get("separador", ",")
 
     @reactive.calc
