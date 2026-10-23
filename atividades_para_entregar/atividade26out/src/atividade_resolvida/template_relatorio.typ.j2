@@ -4,6 +4,7 @@
 
 #set page(
   margin: (x: 2.2cm, y: 2cm),
+  numbering: "1",
 )
 
 #set text(
@@ -11,52 +12,85 @@
   size: 11pt,
 )
 
-#let linha(label, valor) = [
-  *#label:* #valor \
+#set par(justify: true)
+
+#show heading.where(level: 1): it => block(above: 1.6em, below: 1em, it)
+
+// ---------- Título ----------
+#align(center)[
+  #text(22pt, weight: "bold")[Título do relatório]
 ]
 
-= Relatório CSV
+#v(1.5em)
 
-== Fonte de dados
+// ---------- Sumário ----------
+#outline(title: "Sumário", depth: 2)
 
-#linha("Arquivo", "{{ arquivo_path }}")
-#linha("Separador", "{{ separador }}")
-#linha("Linhas", "{{ n_linhas }}")
-#linha("Colunas", "{{ n_colunas }}")
+#pagebreak()
 
-== Configuração do gráfico
+// ---------- Introdução ----------
+= Introdução
 
-#linha("Eixo X", "{{ col_x_label }}")
+#lorem(80)
 
-*Eixos Y:*
-{% for y in cols_y %}
-- {{ y }}
+#lorem(60)
+
+// ---------- Análise Exploratória ----------
+= Análise Exploratória
+
+#lorem(80)
+
+#lorem(60)
+
+// ---------- Resultado das atividades ----------
+= Resultado das atividades
+
+#lorem(80)
+
+#lorem(60)
+
+#pagebreak()
+
+// ---------- Anexos ----------
+= Anexos
+
+== Anexo A: Dados carregados
+
+#lorem(50)
+
+#show table.cell.where(y: 0): strong
+
+{% for t in tabelas %}
+=== {{ t.titulo }}
+
+#text(size: 8pt)[
+  Arquivo: {{ t.path | typ }}. Exibindo {{ t.n_exibidas }} de {{ t.n_linhas }} linhas.
+]
+
+#text(size: 6.5pt)[
+  #table(
+    columns: {{ t.colunas | length }},
+    inset: 2.5pt,
+    stroke: 0.4pt + luma(180),
+    fill: (_, y) => if y == 0 { luma(225) } else if calc.odd(y) { luma(247) },
+    table.header(
+      {% for col in t.colunas %}{{ col | typ }},{% endfor %}
+    ),
+    {% for linha in t.linhas %}{% for v in linha %}{{ v | typ }},{% endfor %}
+    {% endfor %}
+  )
+]
+
 {% endfor %}
 
-== Resultado
-
-#figure(
-  image("{{ scatter_nome }}", width: 90%),
-  caption: [Scatter plot gerado a partir do CSV],
-)
-
 #pagebreak()
 
-= Anexos — Código fonte
+== Anexo B: Trechos do código fonte
 
-Este anexo foi inserido automaticamente no relatório.
+#lorem(50)
 
-== Anexo A — `atividade_resolvida/etapa_tabela.py` (completo)
+=== `atividade_resolvida/estado_wizard.py`
 
-```python
-{{ source("atividade_resolvida/etapa_tabela.py") }}
-```
-
-#pagebreak()
-
-== Anexo B — trecho de `atividade_resolvida/etapa_tabela.py` (linhas 120–260)
-
-#codly(number-format: n => str(n + 119))
-```python
-{{ source("atividade_resolvida/etapa_tabela.py", 120, 260) }}
-```
+````python
+{{ source("atividade_resolvida/estado_wizard.py") }}
+````

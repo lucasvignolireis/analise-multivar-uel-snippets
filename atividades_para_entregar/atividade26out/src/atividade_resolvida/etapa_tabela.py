@@ -236,7 +236,22 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             d_rel["pasta_saida"] = str(pasta_saida)
 
             # 2) Renderiza Typst com Jinja
-            contexto_typst = {"conjuntos": conjuntos}
+            # Dados das tabelas só para o relatório (não vão para o estado)
+            tabelas = []
+            for chave, titulo in CONJUNTOS.items():
+                rel, sep, _ = _fonte(chave)
+                df = dfs[chave]
+                exib = df.head(LIMITE_LINHAS_EXIBICAO).fillna("")
+                tabelas.append({
+                    "titulo": titulo,
+                    "path": rel,
+                    "n_linhas": int(df.shape[0]),
+                    "n_exibidas": int(exib.shape[0]),
+                    "colunas": [str(c) for c in exib.columns],
+                    "linhas": exib.astype(str).values.tolist(),
+                })
+
+            contexto_typst = {"conjuntos": conjuntos, "tabelas": tabelas}
 
             nome_typ = "relatorio.typ"
             nome_pdf = "relatorio.pdf"

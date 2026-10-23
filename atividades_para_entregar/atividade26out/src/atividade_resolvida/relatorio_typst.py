@@ -12,6 +12,16 @@ _env = Environment(
 )
 
 
+def _typ(valor) -> str:
+    """Converte um valor em string literal do Typst (com escape)."""
+    s = str(valor).replace("\\", "\\\\").replace('"', '\\"')
+    s = s.replace("\r", " ").replace("\n", " ")
+    return f'"{s}"'
+
+
+_env.filters["typ"] = _typ
+
+
 def _source(rel_path: str, inicio: int | None = None, fim: int | None = None) -> str:
     """
     Lê um arquivo relativo a src/ e devolve o texto (opcionalmente só um trecho).
