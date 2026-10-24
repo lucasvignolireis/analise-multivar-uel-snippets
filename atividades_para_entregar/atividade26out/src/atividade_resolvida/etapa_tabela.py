@@ -17,6 +17,13 @@ from atividade_resolvida.pca_analise import (
     figura_variancia,
 )
 from atividade_resolvida.regressao_simples import gerar_regressao_simples
+from atividade_resolvida.pls_analise import (
+    gerar_pls,
+    n_max_lvs,
+    variancia_pls,
+    figura_variancia_pls,
+    _dados_ajuste,
+)
 
 LIMITE_LINHAS_EXIBICAO = 1000
 
@@ -109,6 +116,11 @@ def etapa_tabela_ui():
         ui.hr(),
         ui.h5("Regressão linear simples"),
         ui.output_ui("seletor_elemento_ui"),
+        ui.hr(),
+        ui.h5("Regressão PLS"),
+        ui.p("Usa o elemento escolhido acima como Y."),
+        ui.output_plot("grafico_variancia_pls"),
+        ui.output_ui("controles_pls_ui"),
         ui.hr(),
         ui.input_action_button("confirmar_tabela", "Confirmar dados e gerar relatório"),
     )
@@ -239,6 +251,39 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             and (str(c) in yv.columns)
         ]
 
+    def _elemento_pls():
+        els = _elementos_regressao()
+        if not els:
+            return None
+        atual = _ler_input_safe("elemento_regressao", None)
+        return atual if atual in els else els[0]
+
+    def _pls_conf_estado():
+        dados = estado_wizard().get("passos", {}).get("tabela", {}).get("dados", {})
+        base = {
+            "agregar": False,
+            "n_lvs": 2,
+            "centragem": "media",
+            "autoescalonamento": False,
+        }
+        base.update(dados.get("pls", {}))
+        return base
+
+    def _pls_conf_input():
+        est = _pls_conf_estado()
+        centragem = _ler_input_safe("pls_centragem", est["centragem"])
+        if centragem not in ("media", "nenhuma"):
+            centragem = "media"
+
+        return {
+            "agregar": bool(_ler_input_safe("pls_agregar", est["agregar"])),
+            "n_lvs": int(_ler_input_safe("pls_n_lvs", est["n_lvs"])),
+            "centragem": centragem,
+            "autoescalonamento": bool(
+                _ler_input_safe("pls_autoescalonamento", est["autoescalonamento"])
+            ),
+        }
+
     @render.ui
     def seletor_elemento_ui():
         els = _elementos_regressao()
@@ -261,6 +306,74 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             "Elemento para regressão linear simples:",
             choices=els,
             selected=selecionado,
+        )
+
+    @render.ui
+    def controles_pls_ui():
+        xc, xv = _df_xcalib(), _df_xvalid()
+        if xc is None or xv is None:
+            return None
+
+        est = _pls_conf_estado()
+        agregar = bool(_ler_input_safe("pls_agregar", est["agregar"]))
+        n_max = n_max_lvs(xc, xv, agregar)
+        n_atual = max(1, min(int(_ler_input_safe("pls_n_lvs", est["n_lvs"])), n_max))
+
+        return ui.TagList(
+            ui.input_checkbox(
+                "pls_agregar",
+                "Agregar Xvalid/Yvalid ao ajuste (padrão: só calibração)",
+                value=bool(est["agregar"]),
+            ),
+            ui.input_numeric(
+                "pls_n_lvs",
+                f"Número de LVs (1 a {n_max}):",
+                value=n_atual,
+                min=1,
+                max=n_max,
+                step=1,
+            ),
+            ui.input_select(
+                "pls_centragem",
+                "Centragem:",
+                choices={"media": "Na média", "nenhuma": "Sem centragem"},
+                selected=est["centragem"] if est["centragem"] in ("media", "nenhuma") else "media",
+            ),
+            ui.input_checkbox(
+                "pls_autoescalonamento",
+                "Autoescalonamento (desvio padrão)",
+                value=bool(est["autoescalonamento"]),
+            ),
+        )
+
+    @render.plot
+    def grafico_variancia_pls():
+        xc, yc = _df_xcalib(), _df_ycalib()
+        xv, yv = _df_xvalid(), _df_yvalid()
+        el = _elemento_pls()
+
+        if el is None or any(d is None for d in (xc, yc, xv, yv)):
+            return None
+
+        cfg = _pls_conf_input()
+        _, X, y = _dados_ajuste(xc, yc, xv, yv, el, cfg["agregar"])
+
+        n_max = max(1, min(X.shape[0] - 1, X.shape[1]))
+        n_lvs = max(1, min(cfg["n_lvs"], n_max))
+
+        var_x, var_y = variancia_pls(
+            X,
+            y,
+            n_max,
+            centragem=cfg["centragem"],
+            autoescalonamento=cfg["autoescalonamento"],
+        )
+
+        return figura_variancia_pls(
+            var_x,
+            var_y,
+            n_lvs=n_lvs,
+            titulo=f"PLS ({el}): variância explicada acumulada",
         )
 
     @render.text
@@ -397,6 +510,8 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             erro_geracao.set("Escolha um elemento para regressão linear simples.")
             return
 
+        cfg_pls = _pls_conf_input()
+
         gerando.set(True)
         try:
             nome_pasta = datetime.now().strftime("%Y-%m-%d-%H-%M")
@@ -441,6 +556,19 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 pasta_saida,
             )
 
+            pls = gerar_pls(
+                dfs["xcalib"],
+                dfs["ycalib"],
+                dfs["xvalid"],
+                dfs["yvalid"],
+                elemento_reg,
+                pasta_saida,
+                n_lvs=cfg_pls["n_lvs"],
+                agregar=cfg_pls["agregar"],
+                centragem=cfg_pls["centragem"],
+                autoescalonamento=cfg_pls["autoescalonamento"],
+            )
+
             conjuntos = []
             for chave, titulo in CONJUNTOS.items():
                 rel, sep, _ = _fonte(chave)
@@ -476,6 +604,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             d_tab.setdefault("pca", {})
             d_tab["pca"]["analises"] = confs
             d_tab["elemento_analisado"] = elemento_reg
+            d_tab["pls"] = cfg_pls
 
             d_rel = s["passos"]["relatorio"]["dados"]
             d_rel["pasta_saida"] = str(pasta_saida)
@@ -489,6 +618,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 "pca_analises": pca_resultados,
                 "pca_ordem": PCA_KEYS,
                 "regressao": regressao,
+                "pls": pls,
             }
 
             nome_typ = "relatorio.typ"
@@ -519,6 +649,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 + [g["nome"] for g in graficos_elementos]
                 + pca_arquivos
                 + regressao.get("arquivos", [])
+                + pls.get("arquivos", [])
                 + [nome_typ, nome_pdf]
             )
 

@@ -29,6 +29,13 @@ def estado_inicial_wizard():
                     "cabecalho": [],
                     "n_linhas": 0,
                     "colunas": [],
+                    "elemento_analisado": "V",
+                    "pls": {
+                        "agregar": False,
+                        "n_lvs": 2,
+                        "centragem": "media",
+                        "autoescalonamento": False,
+                    },
                     "analises": {
                         "a": {
                             "nome": "PCA A (sem agregação, sem autoescalonamento)",

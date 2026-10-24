@@ -112,6 +112,28 @@ Métricas:
 
 #pagebreak()
 
+== Regressão PLS ({{ pls.elemento }})
+
+Modelo PLS ajustado com {{ pls.n_amostras_ajuste }} amostras
+{{ "(calibração + validação)" if pls.agregar else "(somente calibração)" }},
+centragem {{ "na média" if pls.centragem == "media" else "desativada" }},
+{{ "com" if pls.autoescalonamento else "sem" }} autoescalonamento.
+Foram selecionadas {{ pls.n_lvs }} LV(s), explicando
+{{ pls.var_x_acum[pls.n_lvs - 1] }}% da variância de X e
+{{ pls.var_y_acum[pls.n_lvs - 1] }}% da variância de Y.
+
+#figure(
+  image("{{ pls.grafico_variancia }}", width: 80%),
+  caption: [PLS para {{ pls.elemento }}: variância explicada acumulada de X e Y em função do número de LVs.],
+)
+
+{% for t in pls.tabelas %}
+#strong[{{ t.titulo }}]
+{{ tabela_typ(t, 8) }}
+{% endfor %}
+
+#pagebreak()
+
 = Anexos
 == Anexo A: Dados carregados
 #lorem(50)
