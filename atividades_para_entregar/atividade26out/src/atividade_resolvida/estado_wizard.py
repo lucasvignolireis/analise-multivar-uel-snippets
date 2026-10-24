@@ -29,11 +29,20 @@ def estado_inicial_wizard():
                     "cabecalho": [],
                     "n_linhas": 0,
                     "colunas": [],
-                    "pca": {
-                        "n_pcs": 2,
-                        "centragem": "media",
-                        "autoescalonamento": False,
-                    }
+                    "comparativo": {
+                        "a": {
+                            "nome": "PCA A (centrado + autoescalado)",
+                            "n_pcs": 4,
+                            "centragem": "media",
+                            "autoescalonamento": True,
+                        },
+                        "b": {
+                            "nome": "PCA B (somente centrado)",
+                            "n_pcs": 2,
+                            "centragem": "media",
+                            "autoescalonamento": False,
+                        },
+                    },
                 },
             },
             "relatorio": {

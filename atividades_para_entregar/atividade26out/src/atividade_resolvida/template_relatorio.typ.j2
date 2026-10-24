@@ -1,4 +1,3 @@
-{# ---------- Macro (precisa vir ANTES de qualquer uso) ---------- #}
 {% macro tabela_typ(t, tamanho) %}
 #text(size: {{ tamanho }}pt)[
   #table(
@@ -14,50 +13,27 @@
   )
 ]
 {% endmacro %}
+
 #import "@preview/codly:1.3.0": *
-
 #show: codly-init.with()
-
 #show table.cell.where(y: 0): strong
 
-#set page(
-  margin: (x: 2.2cm, y: 2cm),
-  numbering: "1",
-)
-
-#set text(
-  lang: "pt",
-  size: 11pt,
-)
-
+#set page(margin: (x: 2.2cm, y: 2cm), numbering: "1")
+#set text(lang: "pt", size: 11pt)
 #set par(justify: true)
-
 #show heading.where(level: 1): it => block(above: 1.6em, below: 1em, it)
 
-// ---------- Título ----------
-#align(center)[
-  #text(22pt, weight: "bold")[Título do relatório]
-]
-
+#align(center)[#text(22pt, weight: "bold")[Título do relatório]]
 #v(1.5em)
-
-// ---------- Sumário ----------
 #outline(title: "Sumário", depth: 2)
-
 #pagebreak()
 
-// ---------- Introdução ----------
 = Introdução
-
 #lorem(80)
-
 #lorem(60)
 
-// ---------- Análise Exploratória ----------
 = Análise Exploratória
-
 #lorem(80)
-
 #lorem(60)
 
 #figure(
@@ -72,69 +48,76 @@
 )
 {% endfor %}
 
-== PCA
+== PCA comparativo
 
-O PCA foi ajustado no conjunto de calibração (Xcalib), com centragem {{ "na média" if pca.centragem == "media" else "desativada" }} e autoescalonamento {{ "ativado" if pca.autoescalonamento else "desativado" }}. Foram mantidas {{ pca.n_pcs }} componente(s) principal(is), que explicam {{ pca.variancia_acum_pct[pca.n_pcs - 1] }}% da variância total. O conjunto de validação (Xvalid) foi projetado com os parâmetros de pré-processamento e os loadings da calibração.
+As duas análises abaixo usam Xcalib para ajuste e Xvalid projetado no espaço do modelo.
+
+=== PCA A
+Pré-processamento: centragem {{ "na média" if pca_comp.a.centragem == "media" else "sem centragem" }}, autoescalonamento {{ "ativado" if pca_comp.a.autoescalonamento else "desativado" }}.  
+PCs escolhidas: {{ pca_comp.a.n_pcs }}.  
+Variância acumulada nas PCs escolhidas: {{ pca_comp.a.variancia_acum_pct[pca_comp.a.n_pcs - 1] }}%.
 
 #figure(
-  image("{{ pca.variancia }}", width: 70%),
-  caption: [Variância explicada por componente. A área cinza indica as {{ pca.n_pcs }} PC(s) escolhida(s).],
+  image("{{ pca_comp.a.variancia }}", width: 70%),
+  caption: [PCA A: variância explicada por componente.],
 )
 
-{% if pca.scores %}
+{% if pca_comp.a.scores %}
 #figure(
-  image("{{ pca.scores }}", width: 70%),
-  caption: [Scores de PC1 e PC2. Bolinhas: calibração. Cruzes: validação.],
+  image("{{ pca_comp.a.scores }}", width: 70%),
+  caption: [PCA A: scores de PC1 e PC2.],
 )
 {% endif %}
 
 #figure(
-  image("{{ pca.loadings }}", width: 70%),
-  caption: [Loadings das {{ pca.n_pcs }} PC(s) escolhida(s) por variável.],
+  image("{{ pca_comp.a.loadings }}", width: 70%),
+  caption: [PCA A: loadings das PCs escolhidas.],
 )
 
-{% for t in pca.tabelas %}
-#strong[{{ t.titulo }}]
-
+{% for t in pca_comp.a.tabelas %}
+#strong[{{ t.titulo }} (PCA A)]
 {{ tabela_typ(t, 8) }}
-
 {% endfor %}
 
-// ---------- Resultado das atividades ----------
+=== PCA B
+Pré-processamento: centragem {{ "na média" if pca_comp.b.centragem == "media" else "sem centragem" }}, autoescalonamento {{ "ativado" if pca_comp.b.autoescalonamento else "desativado" }}.  
+PCs escolhidas: {{ pca_comp.b.n_pcs }}.  
+Variância acumulada nas PCs escolhidas: {{ pca_comp.b.variancia_acum_pct[pca_comp.b.n_pcs - 1] }}%.
+
+#figure(
+  image("{{ pca_comp.b.variancia }}", width: 70%),
+  caption: [PCA B: variância explicada por componente.],
+)
+
+{% if pca_comp.b.scores %}
+#figure(
+  image("{{ pca_comp.b.scores }}", width: 70%),
+  caption: [PCA B: scores de PC1 e PC2.],
+)
+{% endif %}
+
+#figure(
+  image("{{ pca_comp.b.loadings }}", width: 70%),
+  caption: [PCA B: loadings das PCs escolhidas.],
+)
+
+{% for t in pca_comp.b.tabelas %}
+#strong[{{ t.titulo }} (PCA B)]
+{{ tabela_typ(t, 8) }}
+{% endfor %}
+
 = Resultado das atividades
-
 #lorem(80)
-
 #lorem(60)
 
 #pagebreak()
-
-// ---------- Anexos ----------
 = Anexos
 
 == Anexo A: Dados carregados
-
 #lorem(50)
 
 {% for t in tabelas %}
 === {{ t.titulo }}
-
-#text(size: 8pt)[
-  Arquivo: {{ t.path | typ }}. Exibindo {{ t.n_exibidas }} de {{ t.n_linhas }} linhas.
-]
-
+#text(size: 8pt)[Arquivo: {{ t.path | typ }}. Exibindo {{ t.n_exibidas }} de {{ t.n_linhas }} linhas.]
 {{ tabela_typ(t, 6.5) }}
-
 {% endfor %}
-
-#pagebreak()
-
-== Anexo B: Trechos do código fonte
-
-#lorem(50)
-
-=== `atividade_resolvida/estado_wizard.py`
-
-````python
-{{ source("atividade_resolvida/estado_wizard.py") }}
-````

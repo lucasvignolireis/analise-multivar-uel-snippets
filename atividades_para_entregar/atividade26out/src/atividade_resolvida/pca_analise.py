@@ -110,12 +110,14 @@ def gerar_pca(
     n_pcs,
     centragem="media",
     autoescalonamento=False,
+    prefixo="pca",
 ):
     """
     PCA ajustado em Xcalib com pré-processamento configurável.
     Xvalid é projetado usando os mesmos parâmetros da calibração.
 
     Gera PNGs em pasta_saida e devolve nomes, números e tabelas para o relatório.
+    O parâmetro `prefixo` evita sobrescrever arquivos (ex.: pca_a, pca_b).
     """
     cols = _colunas_x(df_xcalib, df_xvalid)
     Xc = df_xcalib[cols].to_numpy(dtype=float)
@@ -142,7 +144,7 @@ def gerar_pca(
     arquivos = []
 
     # 1) variância explicada
-    nome_variancia = "pca_variancia.png"
+    nome_variancia = f"{prefixo}_variancia.png"
     fig = figura_variancia(var, var_acum, n_pcs=n_pcs)
     subtitulo = (
         f"Pré-processamento: centragem={centragem}, "
@@ -156,7 +158,7 @@ def gerar_pca(
     # 2) scores PC1 x PC2
     nome_scores = None
     if n_pcs >= 2:
-        nome_scores = "pca_scores.png"
+        nome_scores = f"{prefixo}_scores.png"
         fig, ax = plt.subplots(figsize=(6.5, 5))
         ax.scatter(
             T_calib[:, 0], T_calib[:, 1],
@@ -179,7 +181,7 @@ def gerar_pca(
         arquivos.append(nome_scores)
 
     # 3) loadings das PCs escolhidas
-    nome_loadings = "pca_loadings.png"
+    nome_loadings = f"{prefixo}_loadings.png"
     x = np.arange(len(cols))
     largura = 0.8 / n_pcs
     fig, ax = plt.subplots(figsize=(6.5, 4))
@@ -247,6 +249,7 @@ def gerar_pca(
         "scores": nome_scores,
         "loadings": nome_loadings,
         "arquivos": arquivos,
+        "prefixo": prefixo,
         "colunas": cols,
         "n_pcs": n_pcs,
         "n_max": n_max,

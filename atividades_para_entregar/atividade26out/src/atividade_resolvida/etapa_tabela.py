@@ -29,16 +29,14 @@ CONJUNTOS = {
 CSS_TABELAS = """
 .tabela-scroll {
   max-height: 400px;
-  overflow: auto;                 /* rola só aqui dentro */
-  background: #f3f4f6;            /* cinza bem claro */
+  overflow: auto;
+  background: #f3f4f6;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  scrollbar-gutter: stable;       /* reserva espaço, a barra não "pula" */
-  scrollbar-width: auto;          /* Firefox: barra normal, não fina */
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
   scrollbar-color: #6b7280 #e5e7eb;
 }
-
-/* Chrome/Edge/Safari: barra mais grossa e visível */
 .tabela-scroll::-webkit-scrollbar { width: 14px; height: 14px; }
 .tabela-scroll::-webkit-scrollbar-track { background: #e5e7eb; }
 .tabela-scroll::-webkit-scrollbar-thumb {
@@ -49,27 +47,28 @@ CSS_TABELAS = """
 .tabela-scroll::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 
 .tabela-scroll table {
-  --bs-table-bg: transparent;     /* deixa o cinza do container aparecer */
-  border-collapse: separate;      /* necessário p/ borda do header sticky */
+  --bs-table-bg: transparent;
+  border-collapse: separate;
   border-spacing: 0;
   margin-bottom: 0;
   width: 100%;
-  font-size: 0.8rem;              /* fonte menor */
+  font-size: 0.8rem;
 }
-
-/* células mais compactas */
-.tabela-scroll th,
-.tabela-scroll td {
-  padding: 0.25rem 0.5rem;
-}
-
-/* cabeçalho fixo: só o tbody rola */
+.tabela-scroll th, .tabela-scroll td { padding: 0.25rem 0.5rem; }
 .tabela-scroll thead th {
   position: sticky;
   top: 0;
   z-index: 2;
   background: #e5e7eb;
   border-bottom: 2px solid #9ca3af;
+}
+
+.pca-box {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.8rem;
+  margin-bottom: 0.8rem;
+  background: #fafafa;
 }
 """
 
@@ -80,9 +79,7 @@ def etapa_tabela_ui():
     for chave, titulo in CONJUNTOS.items():
         blocos.append(ui.h5(titulo))
         blocos.append(ui.output_text(f"status_{chave}"))
-        blocos.append(
-            ui.div(ui.output_table(f"tabela_{chave}"), class_="tabela-scroll")
-        )
+        blocos.append(ui.div(ui.output_table(f"tabela_{chave}"), class_="tabela-scroll"))
         blocos.append(ui.hr())
 
     return ui.card(
@@ -90,13 +87,22 @@ def etapa_tabela_ui():
         ui.h4("Passo 2: Conferir os dados"),
         ui.output_text("status_geral"),
         *blocos,
-        ui.h5("PCA (Xcalib)"),
-        ui.p(
-            "Veja a variância explicada e escolha os parâmetros da análise "
-            "(número de PCs, centragem e autoescalonamento)."
+        ui.h5("PCA comparativo (Xcalib)"),
+        ui.p("Configure duas análises PCA para comparação (A e B)."),
+        ui.div(
+            ui.div(
+                ui.h6("PCA A"),
+                ui.output_plot("grafico_variancia_a"),
+                ui.output_ui("controles_pca_a_ui"),
+                class_="pca-box",
+            ),
+            ui.div(
+                ui.h6("PCA B"),
+                ui.output_plot("grafico_variancia_b"),
+                ui.output_ui("controles_pca_b_ui"),
+                class_="pca-box",
+            ),
         ),
-        ui.output_plot("grafico_variancia"),
-        ui.output_ui("controles_pca_ui"),
         ui.hr(),
         ui.input_action_button("confirmar_tabela", "Confirmar dados e gerar relatório"),
     )
@@ -104,14 +110,21 @@ def etapa_tabela_ui():
 
 @module.server
 def etapa_tabela_server(input, output, session, *, estado_wizard):
-    BASE_DIR = Path(__file__).resolve().parent.parent.parent  # .../atividade26out
+    BASE_DIR = Path(__file__).resolve().parent.parent.parent
     PASTA_OUTPUTS = BASE_DIR / "outputs"
 
     gerando = reactive.value(False)
     erro_geracao = reactive.value("")
 
+    def _get_conf_pca():
+        dados = estado_wizard().get("passos", {}).get("tabela", {}).get("dados", {})
+        pca = dados.get("pca", {})
+        comp = pca.get("comparativo", {})
+        a = comp.get("a", {})
+        b = comp.get("b", {})
+        return a, b
+
     def _fonte(chave):
-        """Devolve (path relativo a dados/, separador, path absoluto) do conjunto."""
         s = estado_wizard()["passos"]["carregamento"]
         d = s["dados"]
         rel = d.get(f"{chave}_path")
@@ -204,68 +217,90 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
         return _exibicao(_df_ycalib())
 
     @render.plot
-    def grafico_variancia():
+    def grafico_variancia_a():
         df = _df_xcalib()
         if df is None:
             return None
-
-        _, var, var_acum = variancia_explicada(df)
-
-        with reactive.isolate():
-            conf_pca = (
-                estado_wizard()
-                .get("passos", {})
-                .get("tabela", {})
-                .get("dados", {})
-                .get("pca", {})
-            )
-            n_pcs = int(conf_pca.get("n_pcs", 2))
-
+        a, _ = _get_conf_pca()
+        n_pcs = int(a.get("n_pcs", 2))
+        centragem = a.get("centragem", "media")
+        auto = bool(a.get("autoescalonamento", True))
+        _, var, var_acum = variancia_explicada(df, centragem=centragem, autoescalonamento=auto)
         n_pcs = max(1, min(n_pcs, len(var)))
-        return figura_variancia(var, var_acum, n_pcs=n_pcs)
+        fig = figura_variancia(var, var_acum, n_pcs=n_pcs)
+        fig.axes[0].set_title("PCA A: variância explicada")
+        return fig
+
+    @render.plot
+    def grafico_variancia_b():
+        df = _df_xcalib()
+        if df is None:
+            return None
+        _, b = _get_conf_pca()
+        n_pcs = int(b.get("n_pcs", 2))
+        centragem = b.get("centragem", "media")
+        auto = bool(b.get("autoescalonamento", False))
+        _, var, var_acum = variancia_explicada(df, centragem=centragem, autoescalonamento=auto)
+        n_pcs = max(1, min(n_pcs, len(var)))
+        fig = figura_variancia(var, var_acum, n_pcs=n_pcs)
+        fig.axes[0].set_title("PCA B: variância explicada")
+        return fig
 
     @render.ui
-    def controles_pca_ui():
+    def controles_pca_a_ui():
         df = _df_xcalib()
         if df is None:
             return None
-
-        _, var, _ = variancia_explicada(df)
+        a, _ = _get_conf_pca()
+        _, var, _ = variancia_explicada(
+            df,
+            centragem=a.get("centragem", "media"),
+            autoescalonamento=bool(a.get("autoescalonamento", True)),
+        )
         n_max = len(var)
-
-        with reactive.isolate():
-            conf_pca = (
-                estado_wizard()
-                .get("passos", {})
-                .get("tabela", {})
-                .get("dados", {})
-                .get("pca", {})
-            )
-            n_pcs_atual = int(conf_pca.get("n_pcs", 2))
-            centragem_atual = conf_pca.get("centragem", "media")
-            auto_atual = bool(conf_pca.get("autoescalonamento", False))
-
-        n_pcs_atual = max(1, min(n_pcs_atual, n_max))
+        atual = max(1, min(int(a.get("n_pcs", 2)), n_max))
 
         return ui.TagList(
-            ui.input_numeric(
-                "n_pcs",
-                f"Número de PCs (1 a {n_max}):",
-                value=n_pcs_atual,
-                min=1,
-                max=n_max,
-                step=1,
-            ),
+            ui.input_numeric("pca_a_n_pcs", f"Número de PCs (1 a {n_max}):", value=atual, min=1, max=n_max, step=1),
             ui.input_select(
-                "pca_centragem",
+                "pca_a_centragem",
                 "Centragem:",
                 choices={"media": "Na média", "nenhuma": "Sem centragem"},
-                selected=centragem_atual if centragem_atual in ("media", "nenhuma") else "media",
+                selected=a.get("centragem", "media"),
             ),
             ui.input_checkbox(
-                "pca_autoescalonamento",
+                "pca_a_autoescalonamento",
                 "Autoescalonamento (desvio padrão)",
-                value=auto_atual,
+                value=bool(a.get("autoescalonamento", True)),
+            ),
+        )
+
+    @render.ui
+    def controles_pca_b_ui():
+        df = _df_xcalib()
+        if df is None:
+            return None
+        _, b = _get_conf_pca()
+        _, var, _ = variancia_explicada(
+            df,
+            centragem=b.get("centragem", "media"),
+            autoescalonamento=bool(b.get("autoescalonamento", False)),
+        )
+        n_max = len(var)
+        atual = max(1, min(int(b.get("n_pcs", 2)), n_max))
+
+        return ui.TagList(
+            ui.input_numeric("pca_b_n_pcs", f"Número de PCs (1 a {n_max}):", value=atual, min=1, max=n_max, step=1),
+            ui.input_select(
+                "pca_b_centragem",
+                "Centragem:",
+                choices={"media": "Na média", "nenhuma": "Sem centragem"},
+                selected=b.get("centragem", "media"),
+            ),
+            ui.input_checkbox(
+                "pca_b_autoescalonamento",
+                "Autoescalonamento (desvio padrão)",
+                value=bool(b.get("autoescalonamento", False)),
             ),
         )
 
@@ -283,24 +318,32 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
     @reactive.event(input.confirmar_tabela)
     def _confirmar_tabela():
         erro_geracao.set("")
-
         dfs = {chave: f() for chave, f in DFS.items()}
         if any(df is None for df in dfs.values()):
             erro_geracao.set("Algum conjunto não pôde ser lido.")
             return
 
-        # parâmetros PCA escolhidos na UI
-        n_pcs = input.n_pcs()
-        if n_pcs is None:
-            erro_geracao.set("Escolha um número de PCs válido.")
+        # PCA A
+        a_n = input.pca_a_n_pcs()
+        a_c = input.pca_a_centragem() or "media"
+        a_s = bool(input.pca_a_autoescalonamento())
+
+        # PCA B
+        b_n = input.pca_b_n_pcs()
+        b_c = input.pca_b_centragem() or "media"
+        b_s = bool(input.pca_b_autoescalonamento())
+
+        if a_n is None or b_n is None:
+            erro_geracao.set("Escolha um número de PCs válido em PCA A e PCA B.")
             return
-        n_pcs = int(n_pcs)
 
-        centragem = input.pca_centragem() or "media"
-        if centragem not in ("media", "nenhuma"):
-            centragem = "media"
+        a_n = int(a_n)
+        b_n = int(b_n)
 
-        autoescalonamento = bool(input.pca_autoescalonamento())
+        if a_c not in ("media", "nenhuma"):
+            a_c = "media"
+        if b_c not in ("media", "nenhuma"):
+            b_c = "media"
 
         gerando.set(True)
         try:
@@ -308,7 +351,6 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             pasta_saida = PASTA_OUTPUTS / nome_pasta
             pasta_saida.mkdir(parents=True, exist_ok=True)
 
-            # 0) Scatter plot geral (X vs Y por elemento químico)
             nome_png = "grafico_visualizacao_inicial_dados.png"
             elementos = gerar_scatter_elementos(
                 dfs["xcalib"], dfs["ycalib"],
@@ -316,7 +358,6 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 pasta_saida / nome_png,
             )
 
-            # 0b) Um scatter por elemento
             graficos_elementos = gerar_scatter_por_elemento(
                 dfs["xcalib"], dfs["ycalib"],
                 dfs["xvalid"], dfs["yvalid"],
@@ -324,17 +365,15 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 pasta_saida,
             )
 
-            # 0c) PCA (ajustado em Xcalib) com parâmetros escolhidos
-            pca = gerar_pca(
-                dfs["xcalib"],
-                dfs["xvalid"],
-                pasta_saida,
-                n_pcs=n_pcs,
-                centragem=centragem,
-                autoescalonamento=autoescalonamento,
+            pca_a = gerar_pca(
+                dfs["xcalib"], dfs["xvalid"], pasta_saida,
+                n_pcs=a_n, centragem=a_c, autoescalonamento=a_s, prefixo="pca_a",
+            )
+            pca_b = gerar_pca(
+                dfs["xcalib"], dfs["xvalid"], pasta_saida,
+                n_pcs=b_n, centragem=b_c, autoescalonamento=b_s, prefixo="pca_b",
             )
 
-            # 1) Resumo dos conjuntos
             conjuntos = []
             for chave, titulo in CONJUNTOS.items():
                 rel, sep, _ = _fonte(chave)
@@ -349,7 +388,6 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                     "colunas": [str(c) for c in df.columns],
                 })
 
-            # dados das tabelas para anexo no Typst
             tabelas = []
             for chave, titulo in CONJUNTOS.items():
                 rel, _, _ = _fonte(chave)
@@ -365,25 +403,33 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 })
 
             s = deepcopy(estado_wizard())
-
             d_tab = s["passos"]["tabela"]["dados"]
             d_tab["conjuntos"] = conjuntos
             d_tab.setdefault("pca", {})
-            d_tab["pca"]["n_pcs"] = n_pcs
-            d_tab["pca"]["centragem"] = centragem
-            d_tab["pca"]["autoescalonamento"] = autoescalonamento
+            d_tab.setdefault("pca", {}).setdefault("comparativo", {})
+            d_tab["pca"]["comparativo"]["a"] = {
+                "nome": "PCA A",
+                "n_pcs": a_n,
+                "centragem": a_c,
+                "autoescalonamento": a_s,
+            }
+            d_tab["pca"]["comparativo"]["b"] = {
+                "nome": "PCA B",
+                "n_pcs": b_n,
+                "centragem": b_c,
+                "autoescalonamento": b_s,
+            }
 
             d_rel = s["passos"]["relatorio"]["dados"]
             d_rel["pasta_saida"] = str(pasta_saida)
 
-            # 2) Renderiza Typst com Jinja
             contexto_typst = {
                 "conjuntos": conjuntos,
                 "tabelas": tabelas,
                 "scatter_nome": nome_png,
                 "elementos": elementos,
                 "graficos_elementos": graficos_elementos,
-                "pca": pca,
+                "pca_comp": {"a": pca_a, "b": pca_b},
             }
 
             nome_typ = "relatorio.typ"
@@ -397,7 +443,6 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             )
             caminho_typ.write_text(conteudo_typ, encoding="utf-8")
 
-            # 3) Compila PDF com Typst
             subprocess.run(
                 ["typst", "compile", str(caminho_typ), str(caminho_pdf)],
                 check=True,
@@ -409,14 +454,14 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             d_rel["arquivos"] = (
                 [nome_png]
                 + [g["nome"] for g in graficos_elementos]
-                + pca.get("arquivos", [])
+                + pca_a.get("arquivos", [])
+                + pca_b.get("arquivos", [])
                 + [nome_typ, nome_pdf]
             )
 
             s["passos"]["tabela"]["estado"] = "preenchido"
             s["passos"]["relatorio"]["estado"] = "preenchido"
             s["etapa_atual"] = "relatorio"
-
             estado_wizard.set(s)
 
         except Exception as e:
