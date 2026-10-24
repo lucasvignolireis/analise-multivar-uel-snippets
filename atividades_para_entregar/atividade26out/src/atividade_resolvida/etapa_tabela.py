@@ -7,6 +7,7 @@ import pandas as pd
 from shiny import module, ui, render, reactive
 
 from atividade_resolvida.relatorio_typst import renderizar_relatorio_typst
+from atividade_resolvida.grafico_visualizacao_inicial_dados import gerar_scatter_elementos
 
 LIMITE_LINHAS_EXIBICAO = 1000
 
@@ -212,6 +213,14 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             pasta_saida = PASTA_OUTPUTS / nome_pasta
             pasta_saida.mkdir(parents=True, exist_ok=True)
 
+            # 0) Scatter plot (X vs Y por elemento químico)
+            nome_png = "grafico_visualizacao_inicial_dados.png"
+            elementos = gerar_scatter_elementos(
+                dfs["xcalib"], dfs["ycalib"],
+                dfs["xvalid"], dfs["yvalid"],
+                pasta_saida / nome_png,
+            )
+
             # 1) Resumo dos conjuntos (estado + contexto do relatório)
             conjuntos = []
             for chave, titulo in CONJUNTOS.items():
@@ -227,16 +236,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                     "colunas": [str(c) for c in df.columns],
                 })
 
-            s = deepcopy(estado_wizard())
-
-            d_tab = s["passos"]["tabela"]["dados"]
-            d_tab["conjuntos"] = conjuntos
-
-            d_rel = s["passos"]["relatorio"]["dados"]
-            d_rel["pasta_saida"] = str(pasta_saida)
-
-            # 2) Renderiza Typst com Jinja
-            # Dados das tabelas só para o relatório (não vão para o estado)
+            # dados das tabelas para anexo no Typst
             tabelas = []
             for chave, titulo in CONJUNTOS.items():
                 rel, sep, _ = _fonte(chave)
@@ -251,7 +251,21 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                     "linhas": exib.astype(str).values.tolist(),
                 })
 
-            contexto_typst = {"conjuntos": conjuntos, "tabelas": tabelas}
+            s = deepcopy(estado_wizard())
+
+            d_tab = s["passos"]["tabela"]["dados"]
+            d_tab["conjuntos"] = conjuntos
+
+            d_rel = s["passos"]["relatorio"]["dados"]
+            d_rel["pasta_saida"] = str(pasta_saida)
+
+            # 2) Renderiza Typst com Jinja
+            contexto_typst = {
+                "conjuntos": conjuntos,
+                "tabelas": tabelas,
+                "scatter_nome": nome_png,
+                "elementos": elementos,
+            }
 
             nome_typ = "relatorio.typ"
             nome_pdf = "relatorio.pdf"
@@ -273,7 +287,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
 
             d_rel["typ_path"] = str(caminho_typ)
             d_rel["pdf_path"] = str(caminho_pdf)
-            d_rel["arquivos"] = [nome_typ, nome_pdf]
+            d_rel["arquivos"] = [nome_png, nome_typ, nome_pdf]
 
             s["passos"]["tabela"]["estado"] = "preenchido"
             s["passos"]["relatorio"]["estado"] = "preenchido"
