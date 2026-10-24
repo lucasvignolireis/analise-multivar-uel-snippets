@@ -16,6 +16,7 @@ from atividade_resolvida.pca_analise import (
     variancia_explicada,
     figura_variancia,
 )
+from atividade_resolvida.regressao_simples import gerar_regressao_simples
 
 LIMITE_LINHAS_EXIBICAO = 1000
 
@@ -106,6 +107,9 @@ def etapa_tabela_ui():
         _pca_card_ui("c"),
         _pca_card_ui("d"),
         ui.hr(),
+        ui.h5("Regressão linear simples"),
+        ui.output_ui("seletor_elemento_ui"),
+        ui.hr(),
         ui.input_action_button("confirmar_tabela", "Confirmar dados e gerar relatório"),
     )
 
@@ -178,6 +182,15 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             return pd.DataFrame()
         return df.head(LIMITE_LINHAS_EXIBICAO)
 
+    def _ler_input_safe(input_id, default=None):
+        try:
+            v = getattr(input, input_id)()
+            if v is None:
+                return default
+            return v
+        except Exception:
+            return default
+
     def _pca_conf_estado():
         dados = estado_wizard().get("passos", {}).get("tabela", {}).get("dados", {})
         pca = dados.get("pca", {})
@@ -195,29 +208,15 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             out[k] = base
         return out
 
-    def _ler_input_safe(input_id, default=None):
-        try:
-            v = getattr(input, input_id)()
-            if v is None:
-                return default
-            return v
-        except Exception:
-            return default
-
     def _pca_conf_input(k: str):
         est = _pca_conf_estado()[k]
-        n_pcs = _ler_input_safe(f"pca_{k}_n_pcs", est["n_pcs"])
+        n_pcs = int(_ler_input_safe(f"pca_{k}_n_pcs", est["n_pcs"]))
         centragem = _ler_input_safe(f"pca_{k}_centragem", est["centragem"])
-        auto = _ler_input_safe(f"pca_{k}_autoescalonamento", est["autoescalonamento"])
-        agregar = _ler_input_safe(f"pca_{k}_agregar", est["agregar"])
-
-        n_pcs = int(n_pcs)
+        auto = bool(_ler_input_safe(f"pca_{k}_autoescalonamento", est["autoescalonamento"]))
+        agregar = bool(_ler_input_safe(f"pca_{k}_agregar", est["agregar"]))
 
         if centragem not in ("media", "nenhuma"):
             centragem = "media"
-
-        auto = bool(auto)
-        agregar = bool(agregar)
 
         return {
             "nome": est.get("nome", f"PCA {k.upper()}"),
@@ -226,6 +225,43 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             "centragem": centragem,
             "autoescalonamento": auto,
         }
+
+    def _elementos_regressao():
+        xc, yc = _df_xcalib(), _df_ycalib()
+        xv, yv = _df_xvalid(), _df_yvalid()
+        if any(d is None for d in (xc, yc, xv, yv)):
+            return []
+        return [
+            str(c) for c in xc.columns
+            if str(c) != "Amostra"
+            and (str(c) in yc.columns)
+            and (str(c) in xv.columns)
+            and (str(c) in yv.columns)
+        ]
+
+    @render.ui
+    def seletor_elemento_ui():
+        els = _elementos_regressao()
+        if not els:
+            return ui.p("Carregue os dados para escolher o elemento.")
+
+        est = estado_wizard().get("passos", {}).get("tabela", {}).get("dados", {})
+        padrao_estado = est.get("elemento_analisado", "V")
+        atual_input = _ler_input_safe("elemento_regressao", None)
+
+        if atual_input in els:
+            selecionado = atual_input
+        elif padrao_estado in els:
+            selecionado = padrao_estado
+        else:
+            selecionado = els[0]
+
+        return ui.input_select(
+            "elemento_regressao",
+            "Elemento para regressão linear simples:",
+            choices=els,
+            selected=selecionado,
+        )
 
     @render.text
     def status_xvalid():
@@ -259,7 +295,6 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
     def tabela_ycalib():
         return _exibicao(_df_ycalib())
 
-    # ---------- registros dinâmicos (sem item assignment em output) ----------
     def _registrar_pca(k: str):
         @output(id=f"grafico_variancia_{k}")
         @render.plot
@@ -270,14 +305,12 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
 
             est = _pca_conf_estado()[k]
 
-            n_pcs = _ler_input_safe(f"pca_{k}_n_pcs", est["n_pcs"])
+            n_pcs = int(_ler_input_safe(f"pca_{k}_n_pcs", est["n_pcs"]))
             centragem = _ler_input_safe(f"pca_{k}_centragem", est["centragem"])
-            auto = _ler_input_safe(f"pca_{k}_autoescalonamento", est["autoescalonamento"])
+            auto = bool(_ler_input_safe(f"pca_{k}_autoescalonamento", est["autoescalonamento"]))
 
-            n_pcs = int(n_pcs)
             if centragem not in ("media", "nenhuma"):
                 centragem = "media"
-            auto = bool(auto)
 
             _, var, var_acum = variancia_explicada(
                 df, centragem=centragem, autoescalonamento=auto
@@ -359,6 +392,11 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
 
         confs = {k: _pca_conf_input(k) for k in PCA_KEYS}
 
+        elemento_reg = _ler_input_safe("elemento_regressao", None)
+        if elemento_reg is None:
+            erro_geracao.set("Escolha um elemento para regressão linear simples.")
+            return
+
         gerando.set(True)
         try:
             nome_pasta = datetime.now().strftime("%Y-%m-%d-%H-%M")
@@ -394,6 +432,15 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 )
                 pca_resultados[k]["nome"] = cfg["nome"]
 
+            regressao = gerar_regressao_simples(
+                dfs["xcalib"],
+                dfs["ycalib"],
+                dfs["xvalid"],
+                dfs["yvalid"],
+                elemento_reg,
+                pasta_saida,
+            )
+
             conjuntos = []
             for chave, titulo in CONJUNTOS.items():
                 rel, sep, _ = _fonte(chave)
@@ -428,6 +475,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             d_tab["conjuntos"] = conjuntos
             d_tab.setdefault("pca", {})
             d_tab["pca"]["analises"] = confs
+            d_tab["elemento_analisado"] = elemento_reg
 
             d_rel = s["passos"]["relatorio"]["dados"]
             d_rel["pasta_saida"] = str(pasta_saida)
@@ -440,6 +488,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 "graficos_elementos": graficos_elementos,
                 "pca_analises": pca_resultados,
                 "pca_ordem": PCA_KEYS,
+                "regressao": regressao,
             }
 
             nome_typ = "relatorio.typ"
@@ -469,6 +518,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 [nome_png]
                 + [g["nome"] for g in graficos_elementos]
                 + pca_arquivos
+                + regressao.get("arquivos", [])
                 + [nome_typ, nome_pdf]
             )
 

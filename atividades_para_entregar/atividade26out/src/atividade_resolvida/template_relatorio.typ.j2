@@ -84,8 +84,21 @@ Foram mantidas {{ p.n_pcs }} PC(s), explicando {{ p.variancia_acum_pct[p.n_pcs -
 {% endfor %}
 
 = Resultado das atividades
-#lorem(80)
-#lorem(60)
+
+== Regressão linear simples ({{ regressao.elemento }})
+
+Ajuste do modelo linear com o conjunto de calibração:
+{{ regressao.equacao | typ }}.
+
+Métricas:
+- #strong[R² (calibração)]: {{ regressao.r2 }}
+- #strong[RMSEC]: {{ regressao.rmsec }}
+- #strong[RMSEP (validação)]: {{ regressao.rmsep }}
+
+#figure(
+  image("{{ regressao.grafico }}", width: 80%),
+  caption: [Regressão linear simples para {{ regressao.elemento }}. Bolinhas: calibração. Cruzes: validação. Linha: regressão ajustada na calibração.],
+)
 
 #pagebreak()
 
