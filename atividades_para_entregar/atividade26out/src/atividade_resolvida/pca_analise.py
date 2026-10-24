@@ -5,76 +5,256 @@ import numpy as np
 from sklearn.decomposition import PCA
 
 
-def _colunas_x(df_xcalib):
-    """Colunas numéricas de Xcalib (ignora 'Amostra')."""
-    cols = [str(c) for c in df_xcalib.columns if str(c) != "Amostra"]
+def _colunas_x(df_xcalib, df_xvalid=None):
+    """Colunas de X (ignora 'Amostra'). Se houver Xvalid, usa interseção."""
+    cols_calib = [str(c) for c in df_xcalib.columns if str(c) != "Amostra"]
+
+    if df_xvalid is None:
+        if not cols_calib:
+            raise ValueError("Xcalib não tem colunas para o PCA.")
+        return cols_calib
+
+    cols_valid = {str(c) for c in df_xvalid.columns if str(c) != "Amostra"}
+    cols = [c for c in cols_calib if c in cols_valid]
     if not cols:
-        raise ValueError("Xcalib não tem colunas para o PCA.")
+        raise ValueError("Nenhuma coluna em comum entre Xcalib e Xvalid para o PCA.")
     return cols
 
 
-def gerar_pca_variancia(df_xcalib, pasta_saida):
+def _fmt(v, casas=4):
+    return f"{v:.{casas}f}"
+
+
+def _preprocessar(Xc, Xv, centragem="media", autoescalonamento=False):
     """
-    PCA ajustado em Xcalib, apenas com centragem na média (sem escalonamento).
-    Gera o gráfico de variância explicada (individual e acumulada) com todas
-    as componentes possíveis e devolve nome do PNG e valores.
+    Pré-processa Xc (calibração) e Xv (validação) usando parâmetros da calibração.
+    - centragem: "media" ou "nenhuma"
+    - autoescalonamento: divide por desvio padrão da calibração (ddof=1)
+    """
+    if centragem not in ("media", "nenhuma"):
+        raise ValueError("centragem deve ser 'media' ou 'nenhuma'.")
+
+    media = Xc.mean(axis=0) if centragem == "media" else np.zeros(Xc.shape[1])
+    Xc_p = Xc - media
+    Xv_p = Xv - media
+
+    if autoescalonamento:
+        std = Xc_p.std(axis=0, ddof=1)
+        std = np.where(std == 0, 1.0, std)
+        Xc_p = Xc_p / std
+        Xv_p = Xv_p / std
+    else:
+        std = np.ones(Xc.shape[1])
+
+    return Xc_p, Xv_p, media, std
+
+
+def variancia_explicada(df_xcalib, centragem="media", autoescalonamento=False):
+    """
+    PCA completo em Xcalib, com pré-processamento configurável.
+    Devolve (cols, var%, var_acum%).
     """
     cols = _colunas_x(df_xcalib)
     Xc = df_xcalib[cols].to_numpy(dtype=float)
+    Xc_p, _, _, _ = _preprocessar(
+        Xc, Xc, centragem=centragem, autoescalonamento=autoescalonamento
+    )
 
-    n_comp = min(Xc.shape)
-    pca = PCA(n_components=n_comp)  # centra na média, não escalona
-    pca.fit(Xc)
+    pca = PCA(n_components=min(Xc_p.shape), svd_solver="full")
+    pca.fit(Xc_p)
 
     var = pca.explained_variance_ratio_ * 100
-    var_acum = np.cumsum(var)
-    pcs = [f"PC{i + 1}" for i in range(n_comp)]
+    return cols, var, np.cumsum(var)
 
-    nome_png = "pca_variancia.png"
 
+def figura_variancia(var, var_acum, n_pcs=None):
+    """Scree plot (linhas + pontos). Destaca as PCs escolhidas, se informado."""
+    x = np.arange(1, len(var) + 1)
     fig, ax = plt.subplots(figsize=(6.5, 4))
 
-    # linha da variância individual (scree)
-    ax.plot(
-        pcs, var,
-        color="tab:blue",
-        marker="o",
-        linewidth=2,
-        label="individual",
-    )
-
-    # linha da variância acumulada
-    ax.plot(
-        pcs, var_acum,
-        color="tab:red",
-        marker="o",
-        linewidth=2,
-        label="acumulada",
-    )
-
-    # rótulos nos pontos da variância individual
-    for x, v in zip(pcs, var):
-        ax.annotate(
-            f"{v:.1f}%",
-            (x, v),
-            ha="center", va="bottom",
-            fontsize=8,
-            xytext=(0, 4), textcoords="offset points",
+    if n_pcs:
+        ax.axvspan(
+            0.5, n_pcs + 0.5, color="gray", alpha=0.12,
+            label=f"{n_pcs} PC(s) escolhida(s)",
         )
 
+    ax.plot(x, var, color="tab:blue", marker="o", linewidth=2, label="individual")
+    ax.plot(x, var_acum, color="tab:red", marker="o", linewidth=2, label="acumulada")
+
+    for xi, v in zip(x, var):
+        ax.annotate(
+            f"{v:.1f}%",
+            (xi, v),
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            xytext=(0, 4),
+            textcoords="offset points",
+        )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"PC{i}" for i in x])
     ax.set_ylabel("Variância explicada (%)")
-    ax.set_title("PCA: variância explicada (Xcalib, centrado na média)")
+    ax.set_title("PCA: variância explicada")
     ax.set_ylim(0, 105)
     ax.grid(True, alpha=0.3)
     ax.legend(loc="center right")
     fig.tight_layout()
-    fig.savefig(pasta_saida / nome_png, dpi=150, bbox_inches="tight")
+    return fig
+
+
+def gerar_pca(
+    df_xcalib,
+    df_xvalid,
+    pasta_saida,
+    n_pcs,
+    centragem="media",
+    autoescalonamento=False,
+):
+    """
+    PCA ajustado em Xcalib com pré-processamento configurável.
+    Xvalid é projetado usando os mesmos parâmetros da calibração.
+
+    Gera PNGs em pasta_saida e devolve nomes, números e tabelas para o relatório.
+    """
+    cols = _colunas_x(df_xcalib, df_xvalid)
+    Xc = df_xcalib[cols].to_numpy(dtype=float)
+    Xv = df_xvalid[cols].to_numpy(dtype=float)
+
+    n_max = min(Xc.shape)
+    if not 1 <= n_pcs <= n_max:
+        raise ValueError(f"n_pcs deve estar entre 1 e {n_max} (recebido: {n_pcs}).")
+
+    Xc_p, Xv_p, media, std = _preprocessar(
+        Xc, Xv, centragem=centragem, autoescalonamento=autoescalonamento
+    )
+
+    pca_full = PCA(n_components=n_max, svd_solver="full").fit(Xc_p)
+    var = pca_full.explained_variance_ratio_ * 100
+    var_acum = np.cumsum(var)
+    autovalores = pca_full.explained_variance_
+
+    P = pca_full.components_[:n_pcs]   # loadings
+    T_calib = Xc_p @ P.T               # scores calibração
+    T_valid = Xv_p @ P.T               # scores validação (projetado)
+
+    pcs = [f"PC{i + 1}" for i in range(n_pcs)]
+    arquivos = []
+
+    # 1) variância explicada
+    nome_variancia = "pca_variancia.png"
+    fig = figura_variancia(var, var_acum, n_pcs=n_pcs)
+    subtitulo = (
+        f"Pré-processamento: centragem={centragem}, "
+        f"autoescalonamento={'sim' if autoescalonamento else 'não'}"
+    )
+    fig.axes[0].set_title(f"PCA: variância explicada\n{subtitulo}")
+    fig.savefig(pasta_saida / nome_variancia, dpi=150, bbox_inches="tight")
     plt.close(fig)
+    arquivos.append(nome_variancia)
+
+    # 2) scores PC1 x PC2
+    nome_scores = None
+    if n_pcs >= 2:
+        nome_scores = "pca_scores.png"
+        fig, ax = plt.subplots(figsize=(6.5, 5))
+        ax.scatter(
+            T_calib[:, 0], T_calib[:, 1],
+            marker="o", s=32, alpha=0.75, color="tab:blue", label="calibração",
+        )
+        ax.scatter(
+            T_valid[:, 0], T_valid[:, 1],
+            marker="x", s=55, linewidths=1.8, color="tab:red", label="validação",
+        )
+        ax.axhline(0, color="gray", lw=0.6)
+        ax.axvline(0, color="gray", lw=0.6)
+        ax.set_xlabel(f"PC1 ({var[0]:.1f}%)")
+        ax.set_ylabel(f"PC2 ({var[1]:.1f}%)")
+        ax.set_title("PCA: scores (calibração ajusta, validação projetada)")
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(pasta_saida / nome_scores, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        arquivos.append(nome_scores)
+
+    # 3) loadings das PCs escolhidas
+    nome_loadings = "pca_loadings.png"
+    x = np.arange(len(cols))
+    largura = 0.8 / n_pcs
+    fig, ax = plt.subplots(figsize=(6.5, 4))
+    for k in range(n_pcs):
+        ax.bar(
+            x + (k - (n_pcs - 1) / 2) * largura,
+            P[k], width=largura, label=pcs[k],
+        )
+    ax.set_xticks(x)
+    ax.set_xticklabels(cols)
+    ax.axhline(0, color="gray", lw=0.6)
+    ax.set_ylabel("Loading")
+    ax.set_title("PCA: loadings")
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(pasta_saida / nome_loadings, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    arquivos.append(nome_loadings)
+
+    # tabelas para relatório
+    def amostras(df):
+        if "Amostra" in df.columns:
+            return [str(a) for a in df["Amostra"]]
+        return [str(i + 1) for i in range(len(df))]
+
+    tab_variancia = {
+        "titulo": "Variância explicada por componente",
+        "colunas": ["PC", "Autovalor", "Variância (%)", "Acumulada (%)"],
+        "linhas": [
+            [f"PC{i + 1}", _fmt(autovalores[i]), _fmt(var[i], 2), _fmt(var_acum[i], 2)]
+            for i in range(n_max)
+        ],
+    }
+
+    tab_loadings = {
+        "titulo": "Loadings das componentes escolhidas",
+        "colunas": ["Variável"] + pcs,
+        "linhas": [
+            [cols[j]] + [_fmt(P[k, j]) for k in range(n_pcs)]
+            for j in range(len(cols))
+        ],
+    }
+
+    tab_scores_calib = {
+        "titulo": "Scores: conjunto de calibração",
+        "colunas": ["Amostra"] + pcs,
+        "linhas": [
+            [a] + [_fmt(v) for v in linha]
+            for a, linha in zip(amostras(df_xcalib), T_calib)
+        ],
+    }
+
+    tab_scores_valid = {
+        "titulo": "Scores: conjunto de validação (projetado)",
+        "colunas": ["Amostra"] + pcs,
+        "linhas": [
+            [a] + [_fmt(v) for v in linha]
+            for a, linha in zip(amostras(df_xvalid), T_valid)
+        ],
+    }
 
     return {
-        "variancia": nome_png,
+        "variancia": nome_variancia,
+        "scores": nome_scores,
+        "loadings": nome_loadings,
+        "arquivos": arquivos,
         "colunas": cols,
-        "n_componentes": n_comp,
+        "n_pcs": n_pcs,
+        "n_max": n_max,
+        "centragem": centragem,
+        "autoescalonamento": autoescalonamento,
+        "media": [float(m) for m in media],
+        "desvio": [float(s) for s in std],
         "variancia_pct": [round(float(v), 2) for v in var],
         "variancia_acum_pct": [round(float(v), 2) for v in var_acum],
+        "tabelas": [tab_variancia, tab_loadings, tab_scores_calib, tab_scores_valid],
     }

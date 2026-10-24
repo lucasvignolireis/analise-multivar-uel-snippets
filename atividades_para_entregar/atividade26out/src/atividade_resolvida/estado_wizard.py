@@ -29,6 +29,11 @@ def estado_inicial_wizard():
                     "cabecalho": [],
                     "n_linhas": 0,
                     "colunas": [],
+                    "pca": {
+                        "n_pcs": 2,
+                        "centragem": "media",
+                        "autoescalonamento": False,
+                    }
                 },
             },
             "relatorio": {

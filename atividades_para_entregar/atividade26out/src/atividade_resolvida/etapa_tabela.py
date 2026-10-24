@@ -11,15 +11,19 @@ from atividade_resolvida.grafico_visualizacao_inicial_dados import (
     gerar_scatter_elementos,
     gerar_scatter_por_elemento,
 )
-from atividade_resolvida.pca_analise import gerar_pca_variancia
+from atividade_resolvida.pca_analise import (
+    gerar_pca,
+    variancia_explicada,
+    figura_variancia,
+)
 
 LIMITE_LINHAS_EXIBICAO = 1000
 
 CONJUNTOS = {
-    "xvalid": "Conjunto de validação (X - intensidade)",
-    "xcalib": "Conjunto de calibração (X - intensidade)",
-    "yvalid": "Conjunto de validação (Y - intensidade)",
-    "ycalib": "Conjunto de calibração (Y - intensidade)",
+    "xvalid": "Conjunto de validação (X)",
+    "xcalib": "Conjunto de calibração (X)",
+    "yvalid": "Conjunto de validação (Y)",
+    "ycalib": "Conjunto de calibração (Y)",
 }
 
 CSS_TABELAS = """
@@ -86,6 +90,14 @@ def etapa_tabela_ui():
         ui.h4("Passo 2: Conferir os dados"),
         ui.output_text("status_geral"),
         *blocos,
+        ui.h5("PCA (Xcalib)"),
+        ui.p(
+            "Veja a variância explicada e escolha os parâmetros da análise "
+            "(número de PCs, centragem e autoescalonamento)."
+        ),
+        ui.output_plot("grafico_variancia"),
+        ui.output_ui("controles_pca_ui"),
+        ui.hr(),
         ui.input_action_button("confirmar_tabela", "Confirmar dados e gerar relatório"),
     )
 
@@ -106,8 +118,10 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
         sep = d.get(f"{chave}_sep", ",")
         if not rel:
             return None, sep, None
-        pasta = (BASE_DIR / s["conf"].get("path", "dados/")).resolve()
-        return rel, sep, (pasta / rel).resolve()
+        pasta_conf = Path(s["conf"].get("path", "dados/"))
+        if not pasta_conf.is_absolute():
+            pasta_conf = (BASE_DIR / pasta_conf).resolve()
+        return rel, sep, (pasta_conf / rel).resolve()
 
     def _ler(chave):
         _, sep, caminho = _fonte(chave)
@@ -157,7 +171,6 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             return pd.DataFrame()
         return df.head(LIMITE_LINHAS_EXIBICAO)
 
-    # --- status por conjunto ---
     @render.text
     def status_xvalid():
         return _status(_df_xvalid())
@@ -174,7 +187,6 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
     def status_ycalib():
         return _status(_df_ycalib())
 
-    # --- tabelas ---
     @render.table
     def tabela_xvalid():
         return _exibicao(_df_xvalid())
@@ -190,6 +202,72 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
     @render.table
     def tabela_ycalib():
         return _exibicao(_df_ycalib())
+
+    @render.plot
+    def grafico_variancia():
+        df = _df_xcalib()
+        if df is None:
+            return None
+
+        _, var, var_acum = variancia_explicada(df)
+
+        with reactive.isolate():
+            conf_pca = (
+                estado_wizard()
+                .get("passos", {})
+                .get("tabela", {})
+                .get("dados", {})
+                .get("pca", {})
+            )
+            n_pcs = int(conf_pca.get("n_pcs", 2))
+
+        n_pcs = max(1, min(n_pcs, len(var)))
+        return figura_variancia(var, var_acum, n_pcs=n_pcs)
+
+    @render.ui
+    def controles_pca_ui():
+        df = _df_xcalib()
+        if df is None:
+            return None
+
+        _, var, _ = variancia_explicada(df)
+        n_max = len(var)
+
+        with reactive.isolate():
+            conf_pca = (
+                estado_wizard()
+                .get("passos", {})
+                .get("tabela", {})
+                .get("dados", {})
+                .get("pca", {})
+            )
+            n_pcs_atual = int(conf_pca.get("n_pcs", 2))
+            centragem_atual = conf_pca.get("centragem", "media")
+            auto_atual = bool(conf_pca.get("autoescalonamento", False))
+
+        n_pcs_atual = max(1, min(n_pcs_atual, n_max))
+
+        return ui.TagList(
+            ui.input_numeric(
+                "n_pcs",
+                f"Número de PCs (1 a {n_max}):",
+                value=n_pcs_atual,
+                min=1,
+                max=n_max,
+                step=1,
+            ),
+            ui.input_select(
+                "pca_centragem",
+                "Centragem:",
+                choices={"media": "Na média", "nenhuma": "Sem centragem"},
+                selected=centragem_atual if centragem_atual in ("media", "nenhuma") else "media",
+            ),
+            ui.input_checkbox(
+                "pca_autoescalonamento",
+                "Autoescalonamento (desvio padrão)",
+                value=auto_atual,
+            ),
+        )
 
     @render.text
     def status_geral():
@@ -211,13 +289,26 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             erro_geracao.set("Algum conjunto não pôde ser lido.")
             return
 
+        # parâmetros PCA escolhidos na UI
+        n_pcs = input.n_pcs()
+        if n_pcs is None:
+            erro_geracao.set("Escolha um número de PCs válido.")
+            return
+        n_pcs = int(n_pcs)
+
+        centragem = input.pca_centragem() or "media"
+        if centragem not in ("media", "nenhuma"):
+            centragem = "media"
+
+        autoescalonamento = bool(input.pca_autoescalonamento())
+
         gerando.set(True)
         try:
             nome_pasta = datetime.now().strftime("%Y-%m-%d-%H-%M")
             pasta_saida = PASTA_OUTPUTS / nome_pasta
             pasta_saida.mkdir(parents=True, exist_ok=True)
 
-            # 0) Scatter plot (X vs Y por elemento químico)
+            # 0) Scatter plot geral (X vs Y por elemento químico)
             nome_png = "grafico_visualizacao_inicial_dados.png"
             elementos = gerar_scatter_elementos(
                 dfs["xcalib"], dfs["ycalib"],
@@ -233,10 +324,17 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 pasta_saida,
             )
 
-            # 0c) PCA: variância explicada (ajustado em Xcalib)
-            pca_variancia = gerar_pca_variancia(dfs["xcalib"], pasta_saida)
+            # 0c) PCA (ajustado em Xcalib) com parâmetros escolhidos
+            pca = gerar_pca(
+                dfs["xcalib"],
+                dfs["xvalid"],
+                pasta_saida,
+                n_pcs=n_pcs,
+                centragem=centragem,
+                autoescalonamento=autoescalonamento,
+            )
 
-            # 1) Resumo dos conjuntos (estado + contexto do relatório)
+            # 1) Resumo dos conjuntos
             conjuntos = []
             for chave, titulo in CONJUNTOS.items():
                 rel, sep, _ = _fonte(chave)
@@ -254,7 +352,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             # dados das tabelas para anexo no Typst
             tabelas = []
             for chave, titulo in CONJUNTOS.items():
-                rel, sep, _ = _fonte(chave)
+                rel, _, _ = _fonte(chave)
                 df = dfs[chave]
                 exib = df.head(LIMITE_LINHAS_EXIBICAO).fillna("")
                 tabelas.append({
@@ -270,6 +368,10 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
 
             d_tab = s["passos"]["tabela"]["dados"]
             d_tab["conjuntos"] = conjuntos
+            d_tab.setdefault("pca", {})
+            d_tab["pca"]["n_pcs"] = n_pcs
+            d_tab["pca"]["centragem"] = centragem
+            d_tab["pca"]["autoescalonamento"] = autoescalonamento
 
             d_rel = s["passos"]["relatorio"]["dados"]
             d_rel["pasta_saida"] = str(pasta_saida)
@@ -281,7 +383,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 "scatter_nome": nome_png,
                 "elementos": elementos,
                 "graficos_elementos": graficos_elementos,
-                "pca_variancia": pca_variancia
+                "pca": pca,
             }
 
             nome_typ = "relatorio.typ"
@@ -307,7 +409,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             d_rel["arquivos"] = (
                 [nome_png]
                 + [g["nome"] for g in graficos_elementos]
-                + [pca_variancia["variancia"]]
+                + pca.get("arquivos", [])
                 + [nome_typ, nome_pdf]
             )
 

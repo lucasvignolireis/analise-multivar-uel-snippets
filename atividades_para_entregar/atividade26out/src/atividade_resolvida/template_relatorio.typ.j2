@@ -1,6 +1,24 @@
+{# ---------- Macro (precisa vir ANTES de qualquer uso) ---------- #}
+{% macro tabela_typ(t, tamanho) %}
+#text(size: {{ tamanho }}pt)[
+  #table(
+    columns: {{ t.colunas | length }},
+    inset: 2.5pt,
+    stroke: 0.4pt + luma(180),
+    fill: (_, y) => if y == 0 { luma(225) } else if calc.odd(y) { luma(247) },
+    table.header(
+      {% for col in t.colunas %}{{ col | typ }},{% endfor %}
+    ),
+    {% for linha in t.linhas %}{% for v in linha %}{{ v | typ }},{% endfor %}
+    {% endfor %}
+  )
+]
+{% endmacro %}
 #import "@preview/codly:1.3.0": *
 
 #show: codly-init.with()
+
+#show table.cell.where(y: 0): strong
 
 #set page(
   margin: (x: 2.2cm, y: 2cm),
@@ -44,24 +62,43 @@
 
 #figure(
   image("{{ scatter_nome }}", width: 100%),
-  caption: [Scatter X (intensidade) vs Y (concentracao) para {{ elementos | join(", ") }}. Bolinhas: calibração. Cruzes: validação.],
+  caption: [Scatter X vs Y para {{ elementos | join(", ") }}. Bolinhas: calibração. Cruzes: validação.],
 )
 
 {% for g in graficos_elementos %}
 #figure(
   image("{{ g.nome }}", width: 70%),
-  caption: [Scatter X (intensidade) vs Y (concentracao) para {{ g.elemento }}. Bolinhas: calibração. Cruzes: validação.],
+  caption: [Scatter X vs Y para {{ g.elemento }}. Bolinhas: calibração. Cruzes: validação.],
 )
 {% endfor %}
 
 == PCA
 
-O PCA foi ajustado no conjunto de calibração (Xcalib), com centragem na média e sem escalonamento. A figura abaixo mostra a variância explicada por componente.
+O PCA foi ajustado no conjunto de calibração (Xcalib), com centragem {{ "na média" if pca.centragem == "media" else "desativada" }} e autoescalonamento {{ "ativado" if pca.autoescalonamento else "desativado" }}. Foram mantidas {{ pca.n_pcs }} componente(s) principal(is), que explicam {{ pca.variancia_acum_pct[pca.n_pcs - 1] }}% da variância total. O conjunto de validação (Xvalid) foi projetado com os parâmetros de pré-processamento e os loadings da calibração.
 
 #figure(
-  image("{{ pca_variancia.variancia }}", width: 70%),
-  caption: [Variância explicada por componente (individual e acumulada).],
+  image("{{ pca.variancia }}", width: 70%),
+  caption: [Variância explicada por componente. A área cinza indica as {{ pca.n_pcs }} PC(s) escolhida(s).],
 )
+
+{% if pca.scores %}
+#figure(
+  image("{{ pca.scores }}", width: 70%),
+  caption: [Scores de PC1 e PC2. Bolinhas: calibração. Cruzes: validação.],
+)
+{% endif %}
+
+#figure(
+  image("{{ pca.loadings }}", width: 70%),
+  caption: [Loadings das {{ pca.n_pcs }} PC(s) escolhida(s) por variável.],
+)
+
+{% for t in pca.tabelas %}
+#strong[{{ t.titulo }}]
+
+{{ tabela_typ(t, 8) }}
+
+{% endfor %}
 
 // ---------- Resultado das atividades ----------
 = Resultado das atividades
@@ -79,8 +116,6 @@ O PCA foi ajustado no conjunto de calibração (Xcalib), com centragem na média
 
 #lorem(50)
 
-#show table.cell.where(y: 0): strong
-
 {% for t in tabelas %}
 === {{ t.titulo }}
 
@@ -88,19 +123,7 @@ O PCA foi ajustado no conjunto de calibração (Xcalib), com centragem na média
   Arquivo: {{ t.path | typ }}. Exibindo {{ t.n_exibidas }} de {{ t.n_linhas }} linhas.
 ]
 
-#text(size: 6.5pt)[
-  #table(
-    columns: {{ t.colunas | length }},
-    inset: 2.5pt,
-    stroke: 0.4pt + luma(180),
-    fill: (_, y) => if y == 0 { luma(225) } else if calc.odd(y) { luma(247) },
-    table.header(
-      {% for col in t.colunas %}{{ col | typ }},{% endfor %}
-    ),
-    {% for linha in t.linhas %}{% for v in linha %}{{ v | typ }},{% endfor %}
-    {% endfor %}
-  )
-]
+{{ tabela_typ(t, 6.5) }}
 
 {% endfor %}
 
