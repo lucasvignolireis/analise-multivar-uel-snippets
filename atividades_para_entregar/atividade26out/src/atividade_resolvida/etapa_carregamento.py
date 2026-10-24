@@ -16,7 +16,7 @@ def etapa_carregamento_ui():
     return ui.card(
         ui.h4("Passo 1: Carregamento dos dados (pasta '/dados')"),
 
-        ui.h5("Conjunto de validação (X)"),
+        ui.h5("Conjunto de validação (X - intensidade)"),
         ui.p("CSV com as amostras medidas por dissolução eletrolítica e ICP-AES."),
         ui.output_ui("seletor_xvalid_ui"),
         ui.input_select(
@@ -28,7 +28,7 @@ def etapa_carregamento_ui():
 
         ui.hr(),
 
-        ui.h5("Conjunto de calibração (X)"),
+        ui.h5("Conjunto de calibração (X - intensidade)"),
         ui.p("CSV com as 44 amostras simuladas (V, Cr, Fe, Mo, W)."),
         ui.output_ui("seletor_xcalib_ui"),
         ui.input_select(
@@ -40,7 +40,7 @@ def etapa_carregamento_ui():
 
         ui.hr(),
 
-        ui.h5("Conjunto de validação (Y)"),
+        ui.h5("Conjunto de validação (Y - concentração)"),
         ui.p("CSV com as concentrações de referência das amostras de validação."),
         ui.output_ui("seletor_yvalid_ui"),
         ui.input_select(
@@ -52,7 +52,7 @@ def etapa_carregamento_ui():
 
         ui.hr(),
 
-        ui.h5("Conjunto de calibração (Y)"),
+        ui.h5("Conjunto de calibração (Y - concentração)"),
         ui.p("CSV com as concentrações das 44 amostras simuladas."),
         ui.output_ui("seletor_ycalib_ui"),
         ui.input_select(

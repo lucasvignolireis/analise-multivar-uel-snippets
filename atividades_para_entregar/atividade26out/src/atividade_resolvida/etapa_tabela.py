@@ -15,10 +15,10 @@ from atividade_resolvida.grafico_visualizacao_inicial_dados import (
 LIMITE_LINHAS_EXIBICAO = 1000
 
 CONJUNTOS = {
-    "xvalid": "Conjunto de validação (X)",
-    "xcalib": "Conjunto de calibração (X)",
-    "yvalid": "Conjunto de validação (Y)",
-    "ycalib": "Conjunto de calibração (Y)",
+    "xvalid": "Conjunto de validação (X - intensidade)",
+    "xcalib": "Conjunto de calibração (X - intensidade)",
+    "yvalid": "Conjunto de validação (Y - intensidade)",
+    "ycalib": "Conjunto de calibração (Y - intensidade)",
 }
 
 CSS_TABELAS = """
