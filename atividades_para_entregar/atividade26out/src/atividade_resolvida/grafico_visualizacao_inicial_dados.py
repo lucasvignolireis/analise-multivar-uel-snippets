@@ -51,3 +51,43 @@ def gerar_scatter_elementos(df_xcalib, df_ycalib, df_xvalid, df_yvalid, caminho_
     plt.close(fig)
 
     return elementos
+
+def gerar_scatter_por_elemento(
+    df_xcalib, df_ycalib, df_xvalid, df_yvalid, elementos, pasta_saida
+):
+    """
+    Gera um PNG por elemento (X vs Y), com calibração (bolinhas) e
+    validação (cruzinhas). Usa a mesma cor do gráfico geral.
+    Retorna lista de dicts: [{"elemento": "V", "nome": "scatter_V.png"}, ...]
+    """
+    cmap = plt.get_cmap("tab10")
+    graficos = []
+
+    for i, el in enumerate(elementos):
+        cor = cmap(i % 10)
+        nome = f"scatter_{el}.png"
+
+        fig, ax = plt.subplots(figsize=(6, 4.5))
+        ax.scatter(
+            df_xcalib[el], df_ycalib[el],
+            marker="o", s=32, color=cor, alpha=0.75,
+            label="calibração",
+        )
+        ax.scatter(
+            df_xvalid[el], df_yvalid[el],
+            marker="x", s=55, linewidths=1.8, color=cor,
+            label="validação",
+        )
+
+        ax.set_xlabel(f"X ({el})")
+        ax.set_ylabel(f"Y ({el})")
+        ax.set_title(f"Scatter X vs Y: {el}")
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(pasta_saida / nome, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+        graficos.append({"elemento": el, "nome": nome})
+
+    return graficos

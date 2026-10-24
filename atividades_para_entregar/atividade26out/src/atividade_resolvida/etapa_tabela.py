@@ -7,7 +7,10 @@ import pandas as pd
 from shiny import module, ui, render, reactive
 
 from atividade_resolvida.relatorio_typst import renderizar_relatorio_typst
-from atividade_resolvida.grafico_visualizacao_inicial_dados import gerar_scatter_elementos
+from atividade_resolvida.grafico_visualizacao_inicial_dados import (
+    gerar_scatter_elementos,
+    gerar_scatter_por_elemento,
+)
 
 LIMITE_LINHAS_EXIBICAO = 1000
 
@@ -221,6 +224,14 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 pasta_saida / nome_png,
             )
 
+            # 0b) Um scatter por elemento
+            graficos_elementos = gerar_scatter_por_elemento(
+                dfs["xcalib"], dfs["ycalib"],
+                dfs["xvalid"], dfs["yvalid"],
+                elementos,
+                pasta_saida,
+            )
+
             # 1) Resumo dos conjuntos (estado + contexto do relatório)
             conjuntos = []
             for chave, titulo in CONJUNTOS.items():
@@ -265,6 +276,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 "tabelas": tabelas,
                 "scatter_nome": nome_png,
                 "elementos": elementos,
+                "graficos_elementos": graficos_elementos,
             }
 
             nome_typ = "relatorio.typ"
@@ -287,7 +299,11 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
 
             d_rel["typ_path"] = str(caminho_typ)
             d_rel["pdf_path"] = str(caminho_pdf)
-            d_rel["arquivos"] = [nome_png, nome_typ, nome_pdf]
+            d_rel["arquivos"] = (
+                [nome_png]
+                + [g["nome"] for g in graficos_elementos]
+                + [nome_typ, nome_pdf]
+            )
 
             s["passos"]["tabela"]["estado"] = "preenchido"
             s["passos"]["relatorio"]["estado"] = "preenchido"
