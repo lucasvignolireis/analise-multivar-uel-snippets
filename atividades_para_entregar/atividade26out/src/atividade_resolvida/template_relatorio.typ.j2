@@ -122,10 +122,54 @@ Foram selecionadas {{ pls.n_lvs }} LV(s), explicando
 {{ pls.var_x_acum[pls.n_lvs - 1] }}% da variância de X e
 {{ pls.var_y_acum[pls.n_lvs - 1] }}% da variância de Y.
 
+{% if pls.agregar %}
+#strong[Atenção:] como a validação foi agregada ao ajuste, as métricas de validação abaixo são otimistas (os mesmos dados treinam e avaliam o modelo).
+{% endif %}
+
 #figure(
   image("{{ pls.grafico_variancia }}", width: 80%),
   caption: [PLS para {{ pls.elemento }}: variância explicada acumulada de X e Y em função do número de LVs.],
 )
+
+=== Resíduos
+
+#figure(
+  image("{{ pls.grafico_residuos }}", width: 100%),
+  caption: [Resíduos do modelo PLS para {{ pls.elemento }} ($hat(y) - y$). Bolinhas: calibração. Cruzes: validação.],
+)
+
+=== Valores previstos vs certificados
+
+#figure(
+  image("{{ pls.grafico_medido_previsto }}", width: 80%),
+  caption: [Valores previstos pelo PLS versus valores certificados de {{ pls.elemento }}. Linha preta: ideal (1:1). Tracejado: regressão da validação.],
+)
+
+=== Exatidão (veracidade)
+
+Para cada amostra de validação:
+
+$ "Erro" = hat(y)_i - y_i quad quad "Erro rel. (%)" = (hat(y)_i - y_i)/y_i times 100 quad quad "Recuperação (%)" = hat(y)_i/y_i times 100 $
+
+Bias e teste t pareado (H#sub[0]: bias = 0):
+
+$ "bias" = 1/n sum_(i=1)^n (hat(y)_i - y_i) quad quad t = "bias" / (s_d / sqrt(n)) $
+
+Regressão $hat(y) = a + b y$ entre previsto e certificado: a exatidão exige $b = 1$ e $a = 0$, testados por $t = (b - 1)/s_b$ e $t = a/s_a$ com $n - 2$ graus de liberdade.
+
+Resultado: bias {{ pls.bias }}
+({{ "significativo" if pls.bias_signif else "não significativo" }} a 95%);
+inclinação {{ pls.inclinacao_pv }}
+({{ "difere de 1" if pls.incl_signif else "não difere de 1" }});
+intercepto {{ pls.intercepto_pv }}
+({{ "difere de 0" if pls.int_signif else "não difere de 0" }}).
+
+=== RPD
+
+$ "RPD" = "DP"_("validação") / "SEP" quad quad "SEP" = sqrt(sum_(i=1)^n (e_i - "bias")^2 / (n - 1)) $
+
+RPD = {{ pls.rpd }}, classificado como #strong[{{ pls.rpd_classe }}]
+(\<1,5 inadequado; 1,5–2,0 triagem grosseira; 2,0–2,5 quantificação aproximada; 2,5–3,0 boa; \>3,0 excelente).
 
 {% for t in pls.tabelas %}
 #strong[{{ t.titulo }}]
