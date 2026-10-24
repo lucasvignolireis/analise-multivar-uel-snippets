@@ -48,62 +48,39 @@
 )
 {% endfor %}
 
-== PCA comparativo
+== PCA comparativo (4 análises)
 
-As duas análises abaixo usam Xcalib para ajuste e Xvalid projetado no espaço do modelo.
+{% for k in pca_ordem %}
+{% set p = pca_analises[k] %}
+=== {{ p.nome if p.nome else ("PCA " ~ k|upper) }}
 
-=== PCA A
-Pré-processamento: centragem {{ "na média" if pca_comp.a.centragem == "media" else "sem centragem" }}, autoescalonamento {{ "ativado" if pca_comp.a.autoescalonamento else "desativado" }}.  
-PCs escolhidas: {{ pca_comp.a.n_pcs }}.  
-Variância acumulada nas PCs escolhidas: {{ pca_comp.a.variancia_acum_pct[pca_comp.a.n_pcs - 1] }}%.
+Ajuste {{ "com agregação (Xcalib + Xvalid)" if p.agregar else "sem agregação (ajuste em Xcalib e projeção de Xvalid)" }}.
+Centragem {{ "na média" if p.centragem == "media" else "desativada" }}.
+Autoescalonamento {{ "ativado" if p.autoescalonamento else "desativado" }}.
+Foram mantidas {{ p.n_pcs }} PC(s), explicando {{ p.variancia_acum_pct[p.n_pcs - 1] }}% da variância.
 
 #figure(
-  image("{{ pca_comp.a.variancia }}", width: 70%),
-  caption: [PCA A: variância explicada por componente.],
+  image("{{ p.variancia }}", width: 70%),
+  caption: [{{ p.nome if p.nome else ("PCA " ~ k|upper) }}: variância explicada por componente.],
 )
 
-{% if pca_comp.a.scores %}
+{% if p.scores %}
 #figure(
-  image("{{ pca_comp.a.scores }}", width: 70%),
-  caption: [PCA A: scores de PC1 e PC2.],
+  image("{{ p.scores }}", width: 70%),
+  caption: [{{ p.nome if p.nome else ("PCA " ~ k|upper) }}: scores de PC1 e PC2.],
 )
 {% endif %}
 
 #figure(
-  image("{{ pca_comp.a.loadings }}", width: 70%),
-  caption: [PCA A: loadings das PCs escolhidas.],
+  image("{{ p.loadings }}", width: 70%),
+  caption: [{{ p.nome if p.nome else ("PCA " ~ k|upper) }}: loadings das PCs escolhidas.],
 )
 
-{% for t in pca_comp.a.tabelas %}
-#strong[{{ t.titulo }} (PCA A)]
+{% for t in p.tabelas %}
+#strong[{{ t.titulo }} ({{ p.nome if p.nome else ("PCA " ~ k|upper) }})]
 {{ tabela_typ(t, 8) }}
 {% endfor %}
 
-=== PCA B
-Pré-processamento: centragem {{ "na média" if pca_comp.b.centragem == "media" else "sem centragem" }}, autoescalonamento {{ "ativado" if pca_comp.b.autoescalonamento else "desativado" }}.  
-PCs escolhidas: {{ pca_comp.b.n_pcs }}.  
-Variância acumulada nas PCs escolhidas: {{ pca_comp.b.variancia_acum_pct[pca_comp.b.n_pcs - 1] }}%.
-
-#figure(
-  image("{{ pca_comp.b.variancia }}", width: 70%),
-  caption: [PCA B: variância explicada por componente.],
-)
-
-{% if pca_comp.b.scores %}
-#figure(
-  image("{{ pca_comp.b.scores }}", width: 70%),
-  caption: [PCA B: scores de PC1 e PC2.],
-)
-{% endif %}
-
-#figure(
-  image("{{ pca_comp.b.loadings }}", width: 70%),
-  caption: [PCA B: loadings das PCs escolhidas.],
-)
-
-{% for t in pca_comp.b.tabelas %}
-#strong[{{ t.titulo }} (PCA B)]
-{{ tabela_typ(t, 8) }}
 {% endfor %}
 
 = Resultado das atividades
@@ -111,13 +88,15 @@ Variância acumulada nas PCs escolhidas: {{ pca_comp.b.variancia_acum_pct[pca_co
 #lorem(60)
 
 #pagebreak()
-= Anexos
 
+= Anexos
 == Anexo A: Dados carregados
 #lorem(50)
 
 {% for t in tabelas %}
 === {{ t.titulo }}
-#text(size: 8pt)[Arquivo: {{ t.path | typ }}. Exibindo {{ t.n_exibidas }} de {{ t.n_linhas }} linhas.]
+#text(size: 8pt)[
+  Arquivo: {{ t.path | typ }}. Exibindo {{ t.n_exibidas }} de {{ t.n_linhas }} linhas.
+]
 {{ tabela_typ(t, 6.5) }}
 {% endfor %}

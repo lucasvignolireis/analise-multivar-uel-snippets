@@ -29,20 +29,36 @@ def estado_inicial_wizard():
                     "cabecalho": [],
                     "n_linhas": 0,
                     "colunas": [],
-                    "comparativo": {
+                    "analises": {
                         "a": {
-                            "nome": "PCA A (centrado + autoescalado)",
-                            "n_pcs": 4,
-                            "centragem": "media",
-                            "autoescalonamento": True,
-                        },
-                        "b": {
-                            "nome": "PCA B (somente centrado)",
+                            "nome": "PCA A (sem agregação, sem autoescalonamento)",
+                            "agregar": False,
                             "n_pcs": 2,
                             "centragem": "media",
                             "autoescalonamento": False,
                         },
-                    },
+                        "b": {
+                            "nome": "PCA B (sem agregação, com autoescalonamento)",
+                            "agregar": False,
+                            "n_pcs": 4,
+                            "centragem": "media",
+                            "autoescalonamento": True,
+                        },
+                        "c": {
+                            "nome": "PCA C (com agregação, sem autoescalonamento)",
+                            "agregar": True,
+                            "n_pcs": 2,
+                            "centragem": "media",
+                            "autoescalonamento": False,
+                        },
+                        "d": {
+                            "nome": "PCA D (com agregação, com autoescalonamento)",
+                            "agregar": True,
+                            "n_pcs": 4,
+                            "centragem": "media",
+                            "autoescalonamento": True,
+                        },
+                    }
                 },
             },
             "relatorio": {
