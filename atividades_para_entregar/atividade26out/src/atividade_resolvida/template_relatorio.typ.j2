@@ -54,6 +54,15 @@
 )
 {% endfor %}
 
+== PCA
+
+O PCA foi ajustado no conjunto de calibração (Xcalib), com centragem na média e sem escalonamento. A figura abaixo mostra a variância explicada por componente.
+
+#figure(
+  image("{{ pca_variancia.variancia }}", width: 70%),
+  caption: [Variância explicada por componente (individual e acumulada).],
+)
+
 // ---------- Resultado das atividades ----------
 = Resultado das atividades
 

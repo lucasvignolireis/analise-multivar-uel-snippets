@@ -11,6 +11,7 @@ from atividade_resolvida.grafico_visualizacao_inicial_dados import (
     gerar_scatter_elementos,
     gerar_scatter_por_elemento,
 )
+from atividade_resolvida.pca_analise import gerar_pca_variancia
 
 LIMITE_LINHAS_EXIBICAO = 1000
 
@@ -232,6 +233,9 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 pasta_saida,
             )
 
+            # 0c) PCA: variância explicada (ajustado em Xcalib)
+            pca_variancia = gerar_pca_variancia(dfs["xcalib"], pasta_saida)
+
             # 1) Resumo dos conjuntos (estado + contexto do relatório)
             conjuntos = []
             for chave, titulo in CONJUNTOS.items():
@@ -277,6 +281,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 "scatter_nome": nome_png,
                 "elementos": elementos,
                 "graficos_elementos": graficos_elementos,
+                "pca_variancia": pca_variancia
             }
 
             nome_typ = "relatorio.typ"
@@ -302,6 +307,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             d_rel["arquivos"] = (
                 [nome_png]
                 + [g["nome"] for g in graficos_elementos]
+                + [pca_variancia["variancia"]]
                 + [nome_typ, nome_pdf]
             )
 
