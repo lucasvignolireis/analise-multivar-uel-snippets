@@ -42,6 +42,18 @@
 
 #lorem(60)
 
+#figure(
+  image("{{ scatter_nome }}", width: 100%),
+  caption: [Scatter X vs Y para {{ elementos | join(", ") }}. Bolinhas: calibração. Cruzes: validação.],
+)
+
+{% for g in graficos_elementos %}
+#figure(
+  image("{{ g.nome }}", width: 70%),
+  caption: [Scatter X vs Y para {{ g.elemento }}. Bolinhas: calibração. Cruzes: validação.],
+)
+{% endfor %}
+
 // ---------- Resultado das atividades ----------
 = Resultado das atividades
 
