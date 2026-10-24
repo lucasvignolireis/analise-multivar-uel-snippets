@@ -100,6 +100,16 @@ Métricas:
   caption: [Regressão linear simples para {{ regressao.elemento }}. Bolinhas: calibração. Cruzes: validação. Linha: regressão ajustada na calibração.],
 )
 
+#figure(
+  image("{{ regressao.grafico_residuos }}", width: 80%),
+  caption: [Resíduos da regressão para {{ regressao.elemento }} em função do valor previsto.],
+)
+
+{% for t in regressao.tabelas %}
+#strong[{{ t.titulo }}]
+{{ tabela_typ(t, 8) }}
+{% endfor %}
+
 #pagebreak()
 
 = Anexos
