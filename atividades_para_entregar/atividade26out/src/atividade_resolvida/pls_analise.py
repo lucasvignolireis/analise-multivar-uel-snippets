@@ -160,7 +160,10 @@ def gerar_pls(
     agregar=False,
     centragem="media",
     autoescalonamento=False,
+    prefixo="",
 ):
+    pref = f"{prefixo}_" if prefixo else ""
+
     cols, X, y = _dados_ajuste(
         df_xcalib, df_ycalib, df_xvalid, df_yvalid, elemento, agregar
     )
@@ -176,7 +179,7 @@ def gerar_pls(
         X, y, n_max, centragem=centragem, autoescalonamento=autoescalonamento
     )
 
-    nome_var = f"pls_{elemento}_variancia.png"
+    nome_var = f"{pref}pls_{elemento}_variancia.png"
     subt = (
         f"{elemento} | agregar={'sim' if agregar else 'não'}, "
         f"centragem={centragem}, "
@@ -247,7 +250,7 @@ def gerar_pls(
     int_signif = abs(t_int) > t_crit_reg
 
     # ---------- gráfico: medido (certificado) vs previsto ----------
-    nome_mp = f"pls_{elemento}_medido_previsto.png"
+    nome_mp = f"{pref}pls_{elemento}_medido_previsto.png"
     fig, ax = plt.subplots(figsize=(6.5, 5.5))
     ax.scatter(y_cal, yh_cal, marker="o", s=34, alpha=0.8,
                color="tab:blue", label="calibração")
@@ -271,7 +274,7 @@ def gerar_pls(
     arquivos.append(nome_mp)
 
     # ---------- gráfico: resíduos ----------
-    nome_res = f"pls_{elemento}_residuos.png"
+    nome_res = f"{pref}pls_{elemento}_residuos.png"
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5))
 
     ax1.scatter(yh_cal, res_cal, marker="o", s=34, alpha=0.8,

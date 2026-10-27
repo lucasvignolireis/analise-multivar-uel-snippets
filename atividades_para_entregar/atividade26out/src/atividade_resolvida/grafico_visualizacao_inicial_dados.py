@@ -120,6 +120,7 @@ def gerar_scatter_por_elemento(
     df_yvalid: pd.DataFrame,
     elementos,
     pasta_saida: Path,
+    prefixo: str = "",
 ):
     """
     Gera um scatter por elemento.
@@ -130,6 +131,8 @@ def gerar_scatter_por_elemento(
 
     rot_cal = _rotulos_amostras(df_xcalib, "C")
     rot_val = _rotulos_amostras(df_xvalid, "V")
+
+    pref = f"{prefixo}_" if prefixo else ""
 
     for el in elementos:
         if el not in df_xcalib.columns:
@@ -161,7 +164,7 @@ def gerar_scatter_por_elemento(
         ax.legend()
 
         fig.tight_layout()
-        nome = f"scatter_elemento_{el}.png"
+        nome = f"{pref}scatter_elemento_{el}.png"
         fig.savefig(pasta_saida / nome, dpi=150, bbox_inches="tight")
         plt.close(fig)
 

@@ -15,7 +15,7 @@ def _rotulos(df, prefixo):
 
 
 def gerar_regressao_simples(
-    df_xcalib, df_ycalib, df_xvalid, df_yvalid, elemento, pasta_saida
+    df_xcalib, df_ycalib, df_xvalid, df_yvalid, elemento, pasta_saida, prefixo=""
 ):
     for nome, df in [
         ("Xcalib", df_xcalib),
@@ -25,6 +25,8 @@ def gerar_regressao_simples(
     ]:
         if elemento not in df.columns:
             raise ValueError(f"Coluna '{elemento}' não existe em {nome}.")
+
+    pref = f"{prefixo}_" if prefixo else ""
 
     x_cal = df_xcalib[elemento].to_numpy(dtype=float)
     y_cal = df_ycalib[elemento].to_numpy(dtype=float)
@@ -59,7 +61,7 @@ def gerar_regressao_simples(
     rot_val = _rotulos(df_xvalid, "V")
 
     # gráfico da regressão
-    nome_png = f"regressao_{elemento}.png"
+    nome_png = f"{pref}regressao_{elemento}.png"
     fig, ax = plt.subplots(figsize=(7.0, 5.0))
     ax.scatter(x_cal, y_cal, marker="o", s=34, alpha=0.82,
                color="tab:blue", label="calibração")
@@ -79,7 +81,7 @@ def gerar_regressao_simples(
     plt.close(fig)
 
     # gráfico de resíduos (vs valor previsto)
-    nome_res = f"residuos_{elemento}.png"
+    nome_res = f"{pref}residuos_{elemento}.png"
     fig, ax = plt.subplots(figsize=(7.0, 4.5))
     ax.scatter(y_hat_cal, resid_cal, marker="o", s=34, alpha=0.82,
                color="tab:blue", label="calibração")
