@@ -32,9 +32,9 @@ def estado_inicial_wizard():
                     "elemento_analisado": "V",
                     "pls": {
                         "agregar": False,
-                        "n_lvs": 2,
+                        "n_lvs": 4,
                         "centragem": "media",
-                        "autoescalonamento": False,
+                        "autoescalonamento": True,
                     },
                     "analises": {
                         "a": {
