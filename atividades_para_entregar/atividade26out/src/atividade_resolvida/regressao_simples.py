@@ -55,6 +55,9 @@ def gerar_regressao_simples(
 
     y_hat_val = b0 + b1 * x_val
     resid_val = y_val - y_hat_val
+    # Resíduo relativo em validação (%): (Y - Ŷ) / Y * 100
+    resid_rel_val = np.where(y_val != 0, (resid_val / y_val) * 100.0, np.nan)
+
     rmsep = float(np.sqrt(np.mean(resid_val ** 2)))
 
     rot_cal = _rotulos(df_xcalib, "C")
@@ -123,10 +126,10 @@ def gerar_regressao_simples(
     }
     tab_res_valid = {
         "titulo": "Resíduos: validação",
-        "colunas": ["Amostra", "X", "Y", "Y previsto", "Resíduo"],
+        "colunas": ["Amostra", "X", "Y", "Y previsto", "Resíduo", "Resíduo rel. (%)"],
         "linhas": [
-            [r, _fmt(x), _fmt(y), _fmt(yh), _fmt(e)]
-            for r, x, y, yh, e in zip(rot_val, x_val, y_val, y_hat_val, resid_val)
+            [r, _fmt(x), _fmt(y), _fmt(yh), _fmt(e), _fmt(er, 2)]
+            for r, x, y, yh, e, er in zip(rot_val, x_val, y_val, y_hat_val, resid_val, resid_rel_val)
         ],
     }
 

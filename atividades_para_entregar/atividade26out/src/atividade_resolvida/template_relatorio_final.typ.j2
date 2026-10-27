@@ -278,7 +278,19 @@ Em termos de interpretação, as siglas da ANOVA representam:
 - MQ: média quadrática (SQ/GL);
 - F: estatística F do teste global da regressão.
 
+Vê-se que pela análise de ANOVA e com o R² bom de 0.92. A regressão linear é boa tendo em vista 
+apenas o conjunto de calibração, ou seja ajusta bem os dados de calibração. E vê-se tbm que
+os resíduos não parecem apresentar um padrão. Porém é ao contrastar visualmente com o conjunto de 
+validação que se evidencia que não o modelo não serve bem para prever o comportamento de amostras
+reais. Mas podemos fazer o contraste calculando o Y previsto usando o modelo, para o conjunto 
+de validação:
 
+#strong[Resíduos em validação (filtrado)]
+{% for t in bloco_filtrado.regressao.tabelas %}
+{% if t.titulo == "Resíduos: validação" %}
+{{ tabela_typ(t, 8) }}
+{% endif %}
+{% endfor %}
 
 Mesmo com a melhora do ajuste em calibração após a exclusão dos pontos discrepantes, ainda fica
 evidente que o desempenho preditivo para o conjunto de validação real não é satisfatório. Isso pode
