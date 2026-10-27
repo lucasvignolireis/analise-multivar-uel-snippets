@@ -124,6 +124,100 @@ Em termos práticos, essa leitura da PCA funciona como um diagnóstico inicial: 
 
 #pagebreak()
 
+== Regressão linear simples do Vanádio
+
+Na regressão linear simples para o vanádio, usando inicialmente o conjunto completo de calibração,
+fica evidente a presença de um ponto discrepante que influencia o ajuste de forma relevante.
+
+#figure(
+  image("{{ bloco_completo.regressao.grafico }}", width: 78%),
+  caption: [Regressão linear simples de V com conjunto completo. Arquivo: {{ bloco_completo.regressao.grafico }}],
+)
+
+Ao retirar as amostras 32 e 20 (conforme definido na etapa de filtragem), observa-se melhora visual
+do ajuste sobre o conjunto de calibração. Abaixo estão o gráfico da regressão filtrada e o gráfico
+de resíduos correspondente.
+
+#figure(
+  image("{{ bloco_filtrado.regressao.grafico }}", width: 78%),
+  caption: [Regressão linear simples de V com conjunto filtrado. Arquivo: {{ bloco_filtrado.regressao.grafico }}],
+)
+
+#figure(
+  image("{{ bloco_filtrado.regressao.grafico_residuos }}", width: 78%),
+  caption: [Resíduos da regressão linear simples de V (filtrado), com convenção Y - Ŷ. Arquivo: {{ bloco_filtrado.regressao.grafico_residuos }}],
+)
+
+#strong[ANOVA da regressão linear (filtrado)]
+{% for t in bloco_filtrado.regressao.tabelas %}
+{% if t.titulo == "ANOVA da regressão" %}
+{{ tabela_typ(t, 8) }}
+{% endif %}
+{% endfor %}
+
+Em termos de interpretação, as siglas da ANOVA representam:
+- SQ: soma de quadrados;
+- GL: graus de liberdade;
+- MQ: média quadrática (SQ/GL);
+- F: estatística F do teste global da regressão.
+
+Mesmo com a melhora do ajuste em calibração após a exclusão dos pontos discrepantes, ainda fica
+evidente que o desempenho preditivo para o conjunto de validação real não é satisfatório. Isso pode
+ser percebido tanto pela posição relativa dos pontos de validação no gráfico principal quanto pela
+dispersão de resíduos em validação.
+
+== Regressão PLS para o Vanádio
+
+Com o conjunto filtrado, foi ajustado um modelo PLS para o vanádio usando pré-processamento com
+centragem na média e autoescalonamento, conforme configurado na etapa de análise.
+
+#figure(
+  image("{{ bloco_filtrado.pls.grafico_variancia }}", width: 78%),
+  caption: [PLS de V (filtrado): variância explicada acumulada. Arquivo: {{ bloco_filtrado.pls.grafico_variancia }}],
+)
+
+#figure(
+  image("{{ bloco_filtrado.pls.grafico_medido_previsto }}", width: 78%),
+  caption: [PLS de V (filtrado): medido versus previsto. Arquivo: {{ bloco_filtrado.pls.grafico_medido_previsto }}],
+)
+
+#figure(
+  image("{{ bloco_filtrado.pls.grafico_residuos }}", width: 100%),
+  caption: [PLS de V (filtrado): resíduos com convenção Ŷ - Y. Arquivo: {{ bloco_filtrado.pls.grafico_residuos }}],
+)
+
+Nesta comparação, o PLS apresenta resultado superior ao da regressão linear simples para o objetivo
+de predição no conjunto de validação. Uma interpretação plausível é que o modelo multivariado consegue
+aproveitar melhor a estrutura conjunta dos sinais e reduzir efeitos de interferência entre elementos.
+
+Abaixo, seguem as principais tabelas de avaliação do modelo PLS filtrado:
+
+{% for t in bloco_filtrado.pls.tabelas %}
+{% if t.titulo == "Figuras de mérito do modelo PLS" %}
+#strong[{{ t.titulo }} (filtrado)]
+{{ tabela_typ(t, 8) }}
+{% endif %}
+{% endfor %}
+
+{% for t in bloco_filtrado.pls.tabelas %}
+{% if t.titulo == "Testes de exatidão (95%)" %}
+#strong[{{ t.titulo }} (filtrado)]
+{{ tabela_typ(t, 8) }}
+{% endif %}
+{% endfor %}
+
+{% for t in bloco_filtrado.pls.tabelas %}
+{% if t.titulo == "Validação: certificado vs previsto" %}
+#strong[{{ t.titulo }} (filtrado)]
+{{ tabela_typ(t, 8) }}
+{% endif %}
+{% endfor %}
+
+= Conclusão
+
+Lorem ipsum por enquanto.
+
+
 = Anexos
 
 == Anexo A — resumo das tabelas carregadas
