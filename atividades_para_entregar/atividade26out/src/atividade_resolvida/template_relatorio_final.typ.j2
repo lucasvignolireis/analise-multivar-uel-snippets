@@ -111,7 +111,8 @@ segue uma descrição da árvore de arquivos:
 ```
 ]
 
-E para se ter uma ideia geral de como que é a estrutura da aplicação, uma olhadinha no arquivo `app_atividade_resolvida.py`:
+E para se ter uma ideia geral de como que é a estrutura da aplicação, uma olhadinha 
+no arquivo `app_atividade_resolvida.py`:
 
 #block[
     #set text(size: 8pt)
@@ -122,15 +123,28 @@ E para se ter uma ideia geral de como que é a estrutura da aplicação, uma olh
 ]
 
 
-
-
-= Resultados e comentários
+=  Análise dos dados
 
 == Carregamento dos dados
 
-Os dados foram carregados em quatro conjuntos principais: intensidades de calibração e validação (Xcalib e Xvalid), além das respectivas concentrações de referência (Ycalib e Yvalid). As tabelas completas carregadas no processo estão apresentadas no Anexo A.
+Os dados foram carregados em quatro conjuntos principais: intensidades de calibração 
+e validação (Xcalib e Xvalid), além das respectivas concentrações de referência (Ycalib 
+e Yvalid). As tabelas completas carregadas no processo estão apresentadas no Anexo A.
 
-Também foi implementado um mecanismo de exclusão de amostras no conjunto de calibração, para permitir comparar os resultados com e sem pontos potencialmente discrepantes. Nesta versão, as amostras excluídas foram: #strong[
+Código que carrega os dados no arquivo `etapa_tabela.py`:
+
+#block[
+    #set text(size: 8pt)
+#codly(number-format: n => str(n + 151))
+```python
+{{ source("atividade_resolvida/etapa_tabela.py", 152, 182) }}
+```
+]
+
+
+Também foi implementado um mecanismo de exclusão de amostras no conjunto de calibração, 
+para permitir comparar os resultados com e sem possíveis outliers. 
+Nesta versão, as amostras excluídas foram: #strong[
 {{ amostras_excluir_calib | join(", ") if amostras_excluir_calib else "nenhuma" }}
 ].
 
@@ -140,7 +154,10 @@ Essa escolha foi motivada pela inspeção visual inicial, discutida na seção s
 
 === Gráficos simples por elemento
 
-Como primeiro passo, foram gerados gráficos de dispersão por elemento químico, relacionando intensidade (X) e concentração (Y), com identificação de amostras de calibração e validação. O objetivo aqui foi observar tendências gerais antes de avançar para os modelos.
+Como primeiro passo, foram gerados gráficos de dispersão por elemento químico, 
+relacionando  intensidade (X) e concentração (Y), com identificação de amostras de 
+calibração e validação. O objetivo aqui foi observar tendências gerais antes de
+ avançar para os modelos.
 
 {% for i in range(bloco_filtrado.graficos_elementos | length) %}
 {% set g = bloco_filtrado.graficos_elementos[i] %}
@@ -150,17 +167,33 @@ Como primeiro passo, foram gerados gráficos de dispersão por elemento químico
 )
 {% endfor %}
 
-De modo geral, os gráficos sugerem comportamento aproximadamente linear em todos os elementos, o que dá suporte inicial ao uso tanto de regressão linear simples quanto de PLS. Esse ponto é importante porque indica que, mesmo havendo ruídos e dispersões diferentes entre conjuntos, existe uma relação de primeira ordem que pode ser explorada pelos modelos.
+A partir dessa primeira olhada nos gráficos simples, algumas observações podem ser feitas:
 
-Ao mesmo tempo, alguns sinais de atenção apareceram logo nessa etapa. No vanádio, há um ponto claramente discrepante (C32), e no tungstênio há um ponto (C20) que, embora menos extremo visualmente, também pode influenciar o ajuste quando comparado ao agrupamento principal. Essa leitura inicial justificou a decisão de manter uma análise comparativa entre conjunto completo e conjunto filtrado.
+- De modo geral, os gráficos sugerem comportamento aproximadamente linear em todos 
+  os elementos, o que indica a possibilidade de usar tanto de regressão linear simples 
+  quanto regressão PLS. 
 
-Outro aspecto que chamou atenção foi a separação aparente entre calibração e validação em quase todos os elementos (com exceção parcial de W): em vez de uma nuvem única, os pontos frequentemente se distribuem em faixas distintas. Isso não invalida a análise, mas sinaliza que pode haver diferenças sistemáticas entre os dois conjuntos, o que precisa ser considerado na interpretação dos resultados preditivos.
+- No Vanádio, há um ponto claramente discrepante (C32), e no Tungstênio há um ponto (C20) 
+  que, embora menos extremo visualmente, também pode influenciar o ajuste quando comparado 
+  ao agrupamento principal.
 
-== Análise PCA
+- Há claramente um agrupamento distinto entre os pontos de calibração e de validação,
+  apesar de sempre indicar uma reta com inclinação semelhante. Algo para se ter atenção
+  ao fazer as próximas análises. 
 
-A PCA foi utilizada como ferramenta de análise exploratória multivariada para avaliar estrutura global, agrupamentos e possíveis direções de variação dominante. Foram testadas diferentes configurações, combinando centragem na média, uso ou não de autoescalonamento, variação do número de componentes principais e opção de agregar dados de validação ao ajuste.
+=== Análise PCA
 
-Entre as alternativas testadas, a configuração que mostrou padrões mais informativos para esta etapa foi: centragem na média, sem autoescalonamento, 2 PCs e com agregação de dados de calibração e validação.
+Testei várias variações diferentes para o PCA, sempre com pré-processamento de centragem
+na média, porém variando as seguintes opções:  
+- uso ou não de autoescalonamento;
+- variação do número de componentes principais; 
+- opção de agregar dados de validação ao ajuste.
+
+Na grande maioria das variações não encontrei nenhum agrupamento significativo além do 
+agrupamento que apareceu entre os pontos de validação e de calibração. Dentre as 
+alternativas testadas, esse agrupamento ficou mais significativo na análise gerada com: 
+centragem na média, sem autoescalonamento, 2 PCs e com agregação de dados 
+de calibração e validação. Seguem os resultados dessa análise:
 
 {% set p = bloco_filtrado.pca_analises["c"] %}
 #figure(
@@ -178,11 +211,41 @@ Entre as alternativas testadas, a configuração que mostrou padrões mais infor
   caption: [PCA C (filtrado): loadings. Arquivo: {{ p.loadings }}],
 )
 
-A leitura dos scores indica uma separação perceptível entre grupos associados à calibração e à validação, com uma fronteira aproximada em torno de uma faixa de PC2. Além disso, a nuvem de calibração ocupa uma região mais ampla do espaço de componentes, sugerindo maior cobertura de variabilidade quando comparada ao conjunto de validação.
+Vê-se nesse caso, que com esses parâmetros, a escolha de 2 PCs permite explicar uma variância
+acumulada de 99.2%, sinalizando ser adequada a escolha de 2 PCs nesse caso.
 
-Essa divergência pode ser interpretada, nesta fase, como resultado combinado de diferentes fatores. O primeiro é a própria origem dos dados: calibração simulada versus validação experimental, o que naturalmente pode introduzir deslocamentos sistemáticos entre distribuições. O segundo é a cobertura composicional: mesmo quando ambos os conjuntos tratam dos mesmos elementos, as combinações e dispersões podem não ocupar a mesma “região” multivariada. O terceiro fator é tamanho amostral: com poucos dados de validação, fica mais difícil mapear e corrigir diferenças estruturais entre conjuntos.
+Algumas observações que podem ser feitas considerando esses resultados:
+- O conjunto de dados de validação e de calibração parecem formar grupos isolados, 
+  com uma linha em torno de PC2 = -0.4 parecendo dividir os dois conjuntos.
+- Os dados de calibração parecem cobrir uma área muito maior de variação.
 
-Em termos práticos, essa leitura da PCA funciona como um diagnóstico inicial: os modelos de regressão podem ser viáveis, mas os resultados devem ser interpretados com cuidado, especialmente nas métricas de validação e na discussão de exatidão.
+Essas características podem indicar a presença de alguns dos seguintes fatores, sem 
+no entanto, poder concluir-se qual(is) destes fatores foi realmente o motivo destes 
+comportamentos observados.
+
++ A própria origem dos dados: um a partir de análises de laboratório de amostras reais,
+  outro a partir de um software de simulação. Com a quantidade de dados que temos não
+  é possível identificar, mas algumas das seguintes condições podem estar contribuindo 
+  para isso:
+  - modelo idealizado do software de simulação, cujas simplificações podem ser fontes 
+    de alguns erros sistemáticos.
+  - presença de contaminantes e/ou outras fontes de ruído nas amostras;
+  - várias outras condições experimentais, desde a operação dos equipamentos, preparação
+    das amostras, condição e calibração dos equipamentos.
+
++ A própria dispersão diferente das concentrações representadas no conjunto de validação 
+  versus de calibração, certas combinações de concentrações podem não estar "cobrindo" 
+  a mesma "área" de um conjunto em relação ao outro. Efeito análogo ao que ocorreria
+  se analisando um conjunto homogêneo de dados de mesma origem, se retirasse um subconjunto
+  para validação com algum viés, que não sejam bons representanstes da variabilidade total.
+
++ A quantidade relativamente pequenda de dados: considerando as possíveis variações e combinações
+  que o modelo pretende prever seria necessário um conjunto de dados relativamente maior 
+  tanto de de validação e como de calibração. Com um conjunto mais rico de dados talvez
+  fosse possível modelar/mapear/compensar algumas fontes de erro sistemático.
+
+A principal informação que tirei daqui foi de esperar alguma dificuldade em usar o conjunto 
+de validação presente para validar um modelo gerado pelos dados de calibração atual.
 
 #pagebreak()
 
@@ -195,6 +258,7 @@ fica evidente a presença de um ponto discrepante que influencia o ajuste de for
   image("{{ bloco_completo.regressao.grafico }}", width: 78%),
   caption: [Regressão linear simples de V com conjunto completo. Arquivo: {{ bloco_completo.regressao.grafico }}],
 )
+
 
 Ao retirar as amostras 32 e 20 (conforme definido na etapa de filtragem), observa-se melhora visual
 do ajuste sobre o conjunto de calibração. Abaixo estão o gráfico da regressão filtrada e o gráfico
