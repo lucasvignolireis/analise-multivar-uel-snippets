@@ -23,156 +23,159 @@
 #set par(justify: true)
 #show heading.where(level: 1): it => block(above: 1.6em, below: 1em, it)
 
-#align(center)[#text(22pt, weight: "bold")[Título do relatório]]
+#align(center)[#text(22pt, weight: "bold")[Relatório bruto]]
 #v(1.5em)
 #outline(title: "Sumário", depth: 2)
 #pagebreak()
 
 = Introdução
-#lorem(80)
-#lorem(60)
+#lorem(40)
 
-= Análise Exploratória
-#lorem(80)
-#lorem(60)
+= Comparativo bruto: completo vs filtrado
+Amostras excluídas da calibração: {{ amostras_excluir_calib | join(", ") if amostras_excluir_calib else "nenhuma" }}.
 
+Cada gráfico aparece em sequência: versão completa e versão filtrada.
+
+== Scatter geral
 #figure(
-  image("{{ scatter_nome }}", width: 100%),
-  caption: [Scatter X vs Y para {{ elementos | join(", ") }}. Bolinhas: calibração. Cruzes: validação.],
+  image("{{ bloco_completo.scatter_nome }}", width: 90%),
+  caption: [Completo. Arquivo: {{ bloco_completo.scatter_nome }}],
+)
+#figure(
+  image("{{ bloco_filtrado.scatter_nome }}", width: 90%),
+  caption: [Filtrado. Arquivo: {{ bloco_filtrado.scatter_nome }}],
 )
 
-{% for g in graficos_elementos %}
+== Scatter por elemento
+{% for i in range(bloco_completo.graficos_elementos | length) %}
+{% set g1 = bloco_completo.graficos_elementos[i] %}
 #figure(
-  image("{{ g.nome }}", width: 70%),
-  caption: [Scatter X vs Y para {{ g.elemento }}. Bolinhas: calibração. Cruzes: validação.],
+  image("{{ g1.nome }}", width: 72%),
+  caption: [{{ g1.elemento }} (completo). Arquivo: {{ g1.nome }}],
 )
+{% if i < (bloco_filtrado.graficos_elementos | length) %}
+{% set g2 = bloco_filtrado.graficos_elementos[i] %}
+#figure(
+  image("{{ g2.nome }}", width: 72%),
+  caption: [{{ g2.elemento }} (filtrado). Arquivo: {{ g2.nome }}],
+)
+{% endif %}
 {% endfor %}
 
-== PCA comparativo (4 análises)
-
+== PCA comparativo (A/B/C/D)
 {% for k in pca_ordem %}
-{% set p = pca_analises[k] %}
-=== {{ p.nome if p.nome else ("PCA " ~ k|upper) }}
-
-Ajuste {{ "com agregação (Xcalib + Xvalid)" if p.agregar else "sem agregação (ajuste em Xcalib e projeção de Xvalid)" }}.
-Centragem {{ "na média" if p.centragem == "media" else "desativada" }}.
-Autoescalonamento {{ "ativado" if p.autoescalonamento else "desativado" }}.
-Foram mantidas {{ p.n_pcs }} PC(s), explicando {{ p.variancia_acum_pct[p.n_pcs - 1] }}% da variância.
+{% set p1 = bloco_completo.pca_analises[k] %}
+{% set p2 = bloco_filtrado.pca_analises[k] %}
+=== {{ p1.nome if p1.nome else ("PCA " ~ k|upper) }}
 
 #figure(
-  image("{{ p.variancia }}", width: 70%),
-  caption: [{{ p.nome if p.nome else ("PCA " ~ k|upper) }}: variância explicada por componente.],
+  image("{{ p1.variancia }}", width: 72%),
+  caption: [Variância (completo). Arquivo: {{ p1.variancia }}],
+)
+#figure(
+  image("{{ p2.variancia }}", width: 72%),
+  caption: [Variância (filtrado). Arquivo: {{ p2.variancia }}],
 )
 
-{% if p.scores %}
+{% if p1.scores %}
 #figure(
-  image("{{ p.scores }}", width: 70%),
-  caption: [{{ p.nome if p.nome else ("PCA " ~ k|upper) }}: scores de PC1 e PC2.],
+  image("{{ p1.scores }}", width: 72%),
+  caption: [Scores (completo). Arquivo: {{ p1.scores }}],
+)
+{% endif %}
+{% if p2.scores %}
+#figure(
+  image("{{ p2.scores }}", width: 72%),
+  caption: [Scores (filtrado). Arquivo: {{ p2.scores }}],
 )
 {% endif %}
 
 #figure(
-  image("{{ p.loadings }}", width: 70%),
-  caption: [{{ p.nome if p.nome else ("PCA " ~ k|upper) }}: loadings das PCs escolhidas.],
+  image("{{ p1.loadings }}", width: 72%),
+  caption: [Loadings (completo). Arquivo: {{ p1.loadings }}],
+)
+#figure(
+  image("{{ p2.loadings }}", width: 72%),
+  caption: [Loadings (filtrado). Arquivo: {{ p2.loadings }}],
 )
 
-{% for t in p.tabelas %}
-#strong[{{ t.titulo }} ({{ p.nome if p.nome else ("PCA " ~ k|upper) }})]
+{% for t in p1.tabelas %}
+#strong[{{ t.titulo }} (completo)]
 {{ tabela_typ(t, 8) }}
 {% endfor %}
 
+{% for t in p2.tabelas %}
+#strong[{{ t.titulo }} (filtrado)]
+{{ tabela_typ(t, 8) }}
+{% endfor %}
 {% endfor %}
 
-= Resultado das atividades
-
-== Regressão linear simples ({{ regressao.elemento }})
-
-Ajuste do modelo linear com o conjunto de calibração:
-{{ regressao.equacao | typ }}.
-
-Métricas:
-- #strong[R² (calibração)]: {{ regressao.r2 }}
-- #strong[RMSEC]: {{ regressao.rmsec }}
-- #strong[RMSEP (validação)]: {{ regressao.rmsep }}
+= Regressão linear simples ({{ bloco_completo.regressao.elemento }})
 
 #figure(
-  image("{{ regressao.grafico }}", width: 80%),
-  caption: [Regressão linear simples para {{ regressao.elemento }}. Bolinhas: calibração. Cruzes: validação. Linha: regressão ajustada na calibração.],
+  image("{{ bloco_completo.regressao.grafico }}", width: 80%),
+  caption: [Completo. Arquivo: {{ bloco_completo.regressao.grafico }}],
+)
+#figure(
+  image("{{ bloco_filtrado.regressao.grafico }}", width: 80%),
+  caption: [Filtrado. Arquivo: {{ bloco_filtrado.regressao.grafico }}],
 )
 
 #figure(
-  image("{{ regressao.grafico_residuos }}", width: 80%),
-  caption: [Resíduos da regressão para {{ regressao.elemento }} em função do valor previsto.],
+  image("{{ bloco_completo.regressao.grafico_residuos }}", width: 80%),
+  caption: [Resíduos completo. Arquivo: {{ bloco_completo.regressao.grafico_residuos }}],
+)
+#figure(
+  image("{{ bloco_filtrado.regressao.grafico_residuos }}", width: 80%),
+  caption: [Resíduos filtrado. Arquivo: {{ bloco_filtrado.regressao.grafico_residuos }}],
 )
 
-{% for t in regressao.tabelas %}
-#strong[{{ t.titulo }}]
+{% for t in bloco_completo.regressao.tabelas %}
+#strong[{{ t.titulo }} (completo)]
+{{ tabela_typ(t, 8) }}
+{% endfor %}
+{% for t in bloco_filtrado.regressao.tabelas %}
+#strong[{{ t.titulo }} (filtrado)]
 {{ tabela_typ(t, 8) }}
 {% endfor %}
 
 #pagebreak()
 
-== Regressão PLS ({{ pls.elemento }})
-
-Modelo PLS ajustado com {{ pls.n_amostras_ajuste }} amostras
-{{ "(calibração + validação)" if pls.agregar else "(somente calibração)" }},
-centragem {{ "na média" if pls.centragem == "media" else "desativada" }},
-{{ "com" if pls.autoescalonamento else "sem" }} autoescalonamento.
-Foram selecionadas {{ pls.n_lvs }} LV(s), explicando
-{{ pls.var_x_acum[pls.n_lvs - 1] }}% da variância de X e
-{{ pls.var_y_acum[pls.n_lvs - 1] }}% da variância de Y.
-
-{% if pls.agregar %}
-#strong[Atenção:] como a validação foi agregada ao ajuste, as métricas de validação abaixo são otimistas (os mesmos dados treinam e avaliam o modelo).
-{% endif %}
+= Regressão PLS ({{ bloco_completo.pls.elemento }})
 
 #figure(
-  image("{{ pls.grafico_variancia }}", width: 80%),
-  caption: [PLS para {{ pls.elemento }}: variância explicada acumulada de X e Y em função do número de LVs.],
+  image("{{ bloco_completo.pls.grafico_variancia }}", width: 80%),
+  caption: [Variância completo. Arquivo: {{ bloco_completo.pls.grafico_variancia }}],
 )
-
-=== Resíduos
+#figure(
+  image("{{ bloco_filtrado.pls.grafico_variancia }}", width: 80%),
+  caption: [Variância filtrado. Arquivo: {{ bloco_filtrado.pls.grafico_variancia }}],
+)
 
 #figure(
-  image("{{ pls.grafico_residuos }}", width: 100%),
-  caption: [Resíduos do modelo PLS para {{ pls.elemento }} ($hat(y) - y$). Bolinhas: calibração. Cruzes: validação.],
+  image("{{ bloco_completo.pls.grafico_medido_previsto }}", width: 80%),
+  caption: [Medido vs previsto completo. Arquivo: {{ bloco_completo.pls.grafico_medido_previsto }}],
 )
-
-=== Valores previstos vs certificados
+#figure(
+  image("{{ bloco_filtrado.pls.grafico_medido_previsto }}", width: 80%),
+  caption: [Medido vs previsto filtrado. Arquivo: {{ bloco_filtrado.pls.grafico_medido_previsto }}],
+)
 
 #figure(
-  image("{{ pls.grafico_medido_previsto }}", width: 80%),
-  caption: [Valores previstos pelo PLS versus valores certificados de {{ pls.elemento }}. Linha preta: ideal (1:1). Tracejado: regressão da validação.],
+  image("{{ bloco_completo.pls.grafico_residuos }}", width: 100%),
+  caption: [Resíduos completo. Arquivo: {{ bloco_completo.pls.grafico_residuos }}],
+)
+#figure(
+  image("{{ bloco_filtrado.pls.grafico_residuos }}", width: 100%),
+  caption: [Resíduos filtrado. Arquivo: {{ bloco_filtrado.pls.grafico_residuos }}],
 )
 
-=== Exatidão (veracidade)
-
-Para cada amostra de validação:
-
-$ "Erro" = hat(y)_i - y_i quad quad "Erro rel. (%)" = (hat(y)_i - y_i)/y_i times 100 quad quad "Recuperação (%)" = hat(y)_i/y_i times 100 $
-
-Bias e teste t pareado (H#sub[0]: bias = 0):
-
-$ "bias" = 1/n sum_(i=1)^n (hat(y)_i - y_i) quad quad t = "bias" / (s_d / sqrt(n)) $
-
-Regressão $hat(y) = a + b y$ entre previsto e certificado: a exatidão exige $b = 1$ e $a = 0$, testados por $t = (b - 1)/s_b$ e $t = a/s_a$ com $n - 2$ graus de liberdade.
-
-Resultado: bias {{ pls.bias }}
-({{ "significativo" if pls.bias_signif else "não significativo" }} a 95%);
-inclinação {{ pls.inclinacao_pv }}
-({{ "difere de 1" if pls.incl_signif else "não difere de 1" }});
-intercepto {{ pls.intercepto_pv }}
-({{ "difere de 0" if pls.int_signif else "não difere de 0" }}).
-
-=== RPD
-
-$ "RPD" = "DP"_("validação") / "SEP" quad quad "SEP" = sqrt(sum_(i=1)^n (e_i - "bias")^2 / (n - 1)) $
-
-RPD = {{ pls.rpd }}, classificado como #strong[{{ pls.rpd_classe }}]
-(\<1,5 inadequado; 1,5–2,0 triagem grosseira; 2,0–2,5 quantificação aproximada; 2,5–3,0 boa; \>3,0 excelente).
-
-{% for t in pls.tabelas %}
-#strong[{{ t.titulo }}]
+{% for t in bloco_completo.pls.tabelas %}
+#strong[{{ t.titulo }} (completo)]
+{{ tabela_typ(t, 8) }}
+{% endfor %}
+{% for t in bloco_filtrado.pls.tabelas %}
+#strong[{{ t.titulo }} (filtrado)]
 {{ tabela_typ(t, 8) }}
 {% endfor %}
 
@@ -180,8 +183,6 @@ RPD = {{ pls.rpd }}, classificado como #strong[{{ pls.rpd_classe }}]
 
 = Anexos
 == Anexo A: Dados carregados
-#lorem(50)
-
 {% for t in tabelas %}
 === {{ t.titulo }}
 #text(size: 8pt)[

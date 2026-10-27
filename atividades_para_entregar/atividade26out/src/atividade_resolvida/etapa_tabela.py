@@ -107,6 +107,9 @@ def etapa_tabela_ui():
         ui.h4("Passo 2: Conferir os dados"),
         ui.output_text("status_geral"),
         *blocos,
+        ui.h5("Exclusão de amostras (somente calibração)"),
+        ui.output_ui("input_exclusao_ui"),
+        ui.hr(),
         ui.h5("PCA comparativo (4 análises)"),
         ui.p("Configure as análises PCA A/B/C/D (agregação, n_pcs, centragem e autoescalonamento)."),
         _pca_card_ui("a"),
@@ -283,6 +286,67 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 _ler_input_safe("pls_autoescalonamento", est["autoescalonamento"])
             ),
         }
+
+    def _parse_lista_amostras(txt: str):
+        if txt is None:
+            return []
+        t = str(txt).strip()
+        if not t:
+            return []
+        t = t.replace(";", ",")
+        partes = []
+        for pedaco in t.split(","):
+            pedaco = pedaco.strip()
+            if not pedaco:
+                continue
+            partes.extend([x.strip() for x in pedaco.split() if x.strip()])
+
+        saida = []
+        vistos = set()
+        for p in partes:
+            if not p.isdigit():
+                raise ValueError(f"Valor inválido em exclusão de amostras: '{p}'. Use inteiros separados por vírgula.")
+            v = int(p)
+            if v not in vistos:
+                vistos.add(v)
+                saida.append(v)
+        return saida
+
+    def _filtrar_calibracao(df_xcalib, df_ycalib, amostras_excluir):
+        if "Amostra" not in df_xcalib.columns or "Amostra" not in df_ycalib.columns:
+            raise ValueError("Xcalib e Ycalib precisam ter coluna 'Amostra' para exclusão.")
+
+        ids_x = set(pd.to_numeric(df_xcalib["Amostra"], errors="coerce").dropna().astype(int).tolist())
+        ids_y = set(pd.to_numeric(df_ycalib["Amostra"], errors="coerce").dropna().astype(int).tolist())
+        ids_validos = ids_x.intersection(ids_y)
+
+        inexistentes = [a for a in amostras_excluir if a not in ids_validos]
+        if inexistentes:
+            raise ValueError(
+                "Amostra(s) inexistente(s) no conjunto de calibração: "
+                + ", ".join(str(v) for v in inexistentes)
+            )
+
+        if not amostras_excluir:
+            return df_xcalib.copy(), df_ycalib.copy()
+
+        xnum = pd.to_numeric(df_xcalib["Amostra"], errors="coerce").astype("Int64")
+        ynum = pd.to_numeric(df_ycalib["Amostra"], errors="coerce").astype("Int64")
+        mx = ~xnum.isin(amostras_excluir)
+        my = ~ynum.isin(amostras_excluir)
+
+        return df_xcalib.loc[mx].copy(), df_ycalib.loc[my].copy()
+
+    @render.ui
+    def input_exclusao_ui():
+        dados = estado_wizard().get("passos", {}).get("tabela", {}).get("dados", {})
+        valor = str(dados.get("amostras_excluir_calib", "20,32"))
+        return ui.input_text(
+            "amostras_excluir_calib",
+            "Amostras de calibração para excluir (ex: 20,32):",
+            value=valor,
+            placeholder="20,32",
+        )
 
     @render.ui
     def seletor_elemento_ui():
@@ -512,62 +576,87 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
 
         cfg_pls = _pls_conf_input()
 
+        txt_excluir = _ler_input_safe("amostras_excluir_calib", "20,32")
+        try:
+            amostras_excluir = _parse_lista_amostras(txt_excluir)
+        except Exception as e:
+            erro_geracao.set(str(e))
+            return
+
+        try:
+            xcalib_f, ycalib_f = _filtrar_calibracao(dfs["xcalib"], dfs["ycalib"], amostras_excluir)
+        except Exception as e:
+            erro_geracao.set(str(e))
+            return
+
         gerando.set(True)
         try:
             nome_pasta = datetime.now().strftime("%Y-%m-%d-%H-%M")
             pasta_saida = PASTA_OUTPUTS / nome_pasta
             pasta_saida.mkdir(parents=True, exist_ok=True)
 
-            nome_png = "grafico_visualizacao_inicial_dados.png"
-            elementos = gerar_scatter_elementos(
-                dfs["xcalib"], dfs["ycalib"],
-                dfs["xvalid"], dfs["yvalid"],
-                pasta_saida / nome_png,
-            )
-
-            graficos_elementos = gerar_scatter_por_elemento(
-                dfs["xcalib"], dfs["ycalib"],
-                dfs["xvalid"], dfs["yvalid"],
-                elementos,
-                pasta_saida,
-            )
-
-            pca_resultados = {}
-            for k in PCA_KEYS:
-                cfg = confs[k]
-                pca_resultados[k] = gerar_pca(
-                    dfs["xcalib"],
-                    dfs["xvalid"],
-                    pasta_saida,
-                    n_pcs=cfg["n_pcs"],
-                    centragem=cfg["centragem"],
-                    autoescalonamento=cfg["autoescalonamento"],
-                    prefixo=f"pca_{k}",
-                    agregar=cfg["agregar"],
+            def _rodar_bloco(prefixo: str, xcal, ycal):
+                nome_png = f"{prefixo}_grafico_visualizacao_inicial_dados.png"
+                elementos = gerar_scatter_elementos(
+                    xcal, ycal, dfs["xvalid"], dfs["yvalid"], pasta_saida / nome_png
                 )
-                pca_resultados[k]["nome"] = cfg["nome"]
 
-            regressao = gerar_regressao_simples(
-                dfs["xcalib"],
-                dfs["ycalib"],
-                dfs["xvalid"],
-                dfs["yvalid"],
-                elemento_reg,
-                pasta_saida,
-            )
+                graficos_elementos = gerar_scatter_por_elemento(
+                    xcal, ycal, dfs["xvalid"], dfs["yvalid"], elementos, pasta_saida, prefixo=prefixo
+                )
 
-            pls = gerar_pls(
-                dfs["xcalib"],
-                dfs["ycalib"],
-                dfs["xvalid"],
-                dfs["yvalid"],
-                elemento_reg,
-                pasta_saida,
-                n_lvs=cfg_pls["n_lvs"],
-                agregar=cfg_pls["agregar"],
-                centragem=cfg_pls["centragem"],
-                autoescalonamento=cfg_pls["autoescalonamento"],
-            )
+                pca_resultados = {}
+                for k in PCA_KEYS:
+                    cfg = confs[k]
+                    pca_resultados[k] = gerar_pca(
+                        xcal,
+                        dfs["xvalid"],
+                        pasta_saida,
+                        n_pcs=cfg["n_pcs"],
+                        centragem=cfg["centragem"],
+                        autoescalonamento=cfg["autoescalonamento"],
+                        prefixo=f"{prefixo}_pca_{k}",
+                        agregar=cfg["agregar"],
+                    )
+                    pca_resultados[k]["nome"] = cfg["nome"]
+
+                regressao = gerar_regressao_simples(
+                    xcal,
+                    ycal,
+                    dfs["xvalid"],
+                    dfs["yvalid"],
+                    elemento_reg,
+                    pasta_saida,
+                    prefixo=prefixo,
+                )
+
+                pls = gerar_pls(
+                    xcal,
+                    ycal,
+                    dfs["xvalid"],
+                    dfs["yvalid"],
+                    elemento_reg,
+                    pasta_saida,
+                    n_lvs=cfg_pls["n_lvs"],
+                    agregar=cfg_pls["agregar"],
+                    centragem=cfg_pls["centragem"],
+                    autoescalonamento=cfg_pls["autoescalonamento"],
+                    prefixo=prefixo,
+                )
+
+                return {
+                    "prefixo": prefixo,
+                    "scatter_nome": nome_png,
+                    "elementos": elementos,
+                    "graficos_elementos": graficos_elementos,
+                    "pca_analises": pca_resultados,
+                    "pca_ordem": PCA_KEYS,
+                    "regressao": regressao,
+                    "pls": pls,
+                }
+
+            bloco_completo = _rodar_bloco("completo", dfs["xcalib"], dfs["ycalib"])
+            bloco_filtrado = _rodar_bloco("filtrado", xcalib_f, ycalib_f)
 
             conjuntos = []
             for chave, titulo in CONJUNTOS.items():
@@ -604,6 +693,7 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             d_tab.setdefault("pca", {})
             d_tab["pca"]["analises"] = confs
             d_tab["elemento_analisado"] = elemento_reg
+            d_tab["amostras_excluir_calib"] = str(txt_excluir or "")
             d_tab["pls"] = cfg_pls
 
             d_rel = s["passos"]["relatorio"]["dados"]
@@ -612,13 +702,10 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
             contexto_typst = {
                 "conjuntos": conjuntos,
                 "tabelas": tabelas,
-                "scatter_nome": nome_png,
-                "elementos": elementos,
-                "graficos_elementos": graficos_elementos,
-                "pca_analises": pca_resultados,
+                "amostras_excluir_calib": amostras_excluir,
+                "bloco_completo": bloco_completo,
+                "bloco_filtrado": bloco_filtrado,
                 "pca_ordem": PCA_KEYS,
-                "regressao": regressao,
-                "pls": pls,
             }
 
             nome_typ = "relatorio.typ"
@@ -638,20 +725,18 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 cwd=str(pasta_saida),
             )
 
-            pca_arquivos = []
-            for k in PCA_KEYS:
-                pca_arquivos.extend(pca_resultados[k].get("arquivos", []))
+            arquivos = []
+            for b in [bloco_completo, bloco_filtrado]:
+                arquivos.append(b["scatter_nome"])
+                arquivos.extend([g["nome"] for g in b["graficos_elementos"]])
+                for k in PCA_KEYS:
+                    arquivos.extend(b["pca_analises"][k].get("arquivos", []))
+                arquivos.extend(b["regressao"].get("arquivos", []))
+                arquivos.extend(b["pls"].get("arquivos", []))
 
             d_rel["typ_path"] = str(caminho_typ)
             d_rel["pdf_path"] = str(caminho_pdf)
-            d_rel["arquivos"] = (
-                [nome_png]
-                + [g["nome"] for g in graficos_elementos]
-                + pca_arquivos
-                + regressao.get("arquivos", [])
-                + pls.get("arquivos", [])
-                + [nome_typ, nome_pdf]
-            )
+            d_rel["arquivos"] = arquivos + [nome_typ, nome_pdf]
 
             s["passos"]["tabela"]["estado"] = "preenchido"
             s["passos"]["relatorio"]["estado"] = "preenchido"

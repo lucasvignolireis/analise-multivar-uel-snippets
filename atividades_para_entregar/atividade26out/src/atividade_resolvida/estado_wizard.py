@@ -30,6 +30,7 @@ def estado_inicial_wizard():
                     "n_linhas": 0,
                     "colunas": [],
                     "elemento_analisado": "V",
+                    "amostras_excluir_calib": "20,32",
                     "pls": {
                         "agregar": False,
                         "n_lvs": 4,
