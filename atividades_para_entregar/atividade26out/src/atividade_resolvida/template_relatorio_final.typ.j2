@@ -55,6 +55,8 @@ o comportamento dos dados e construir modelos de predição, apresentar os resul
 Para isso, o trabalho foi dividido em  três frentes complementares: uma análise exploratória inicial, 
 uma etapa de regressão linear simples e, por fim, uma etapa de regressão multivariada por PLS.
 
+#pagebreak()
+
 
 = Ferramentas e abordagem utilizadas
 
@@ -70,15 +72,19 @@ a usar o Shiny, mas com certeza adicionou bastante tempo ao projeto.
 Além disso, para o relatório final, usei o Typst, que é um sistema de typesetting, que a grosso modo é um
 sucessor mais moderno do LaTeX, mais simples de usar e que tem um arquivo fonte mais compreensível.
 
-O dashboard criado está estruturado como um wizard de 3 etapas: 1. Escolher os CSVs que vão ser carregados
-de dentro de uma pasta de dados. 2. Conferência dos dados e escolha de parâmetros pras análises. 
-3. Visualizar os relatórios gerados (um bruto com todos os gráfico, e outro, este aqui, com comentários
-e análise)
+O dashboard criado está estruturado como um wizard de 3 etapas: 
+
++ Escolher os CSVs que vão ser carregados de dentro de uma pasta de dados. 
++ Conferência dos dados e escolha de parâmetros pras análises. 
++ Visualizar os relatórios gerados (um bruto com todos os gráfico, e outro, este aqui, com comentários
+  e análise)
 
 Ao longo do desenvolvimento, o GitHub Copilot foi utilizado como apoio para montar a estrutura inicial 
 de partes do código, com revisão e ajustes manuais em seguida. Na prática, o processo foi iterativo: 
 primeiro foram gerados muitos gráficos e saídas intermediárias, depois foi feita a seleção do que era 
 mais relevante para a narrativa técnica do relatório final.
+
+#pagebreak()
 
 == O código fonte
 
@@ -122,8 +128,9 @@ no arquivo `app_atividade_resolvida.py`:
 ```
 ]
 
+#pagebreak()
 
-=  Análise dos dados
+= Análise dos dados
 
 == Carregamento dos dados
 
@@ -140,6 +147,8 @@ Código que carrega os dados no arquivo `etapa_tabela.py`:
 {{ source("atividade_resolvida/etapa_tabela.py", 152, 182) }}
 ```
 ]
+
+#pagebreak()
 
 == Análise exploratória
 
@@ -172,6 +181,7 @@ A partir dessa primeira olhada nos gráficos simples, algumas observações pode
   apesar de sempre indicar uma reta com inclinação semelhante. Algo para se ter atenção
   ao fazer as próximas análises. 
 
+#pagebreak()
 === Análise PCA
 
 Testei várias variações diferentes para o PCA, sempre com pré-processamento de centragem
@@ -292,14 +302,15 @@ de validação:
 {% endif %}
 {% endfor %}
 
-Mesmo com a melhora do ajuste em calibração após a exclusão dos pontos discrepantes, ainda fica
-evidente que o desempenho preditivo para o conjunto de validação real não é satisfatório. Isso pode
-ser percebido tanto pela posição relativa dos pontos de validação no gráfico principal quanto pela
-dispersão de resíduos em validação.
+Observa-se claramente nessa figura, que os desvios absolutos e relativos são muito grandes, com o resíduo
+relativo indo de 10% a quase 70%. Logo, a utilização da regressão linear simples se mostra
+inadequada como modelo preditivo, por isso seria necessário buscar outros modelos preditivos.
+
+#pagebreak()
 
 == Regressão PLS para o Vanádio
 
-Com o conjunto filtrado, foi ajustado um modelo PLS para o vanádio usando pré-processamento com
+Como, j o conjunto filtrado, foi ajustado um modelo PLS para o vanádio usando pré-processamento com
 centragem na média e autoescalonamento, conforme configurado na etapa de análise.
 
 #figure(
@@ -344,11 +355,13 @@ Abaixo, seguem as principais tabelas de avaliação do modelo PLS filtrado:
 {% endif %}
 {% endfor %}
 
+#pagebreak()
 = Conclusão
 
 Lorem ipsum por enquanto.
 
 
+#pagebreak()
 = Anexos
 
 == Anexo A — resumo das tabelas carregadas
