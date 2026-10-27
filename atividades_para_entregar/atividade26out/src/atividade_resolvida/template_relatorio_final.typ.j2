@@ -141,15 +141,6 @@ Código que carrega os dados no arquivo `etapa_tabela.py`:
 ```
 ]
 
-
-Também foi implementado um mecanismo de exclusão de amostras no conjunto de calibração, 
-para permitir comparar os resultados com e sem possíveis outliers. 
-Nesta versão, as amostras excluídas foram: #strong[
-{{ amostras_excluir_calib | join(", ") if amostras_excluir_calib else "nenhuma" }}
-].
-
-Essa escolha foi motivada pela inspeção visual inicial, discutida na seção seguinte.
-
 == Análise exploratória
 
 === Gráficos simples por elemento
@@ -159,8 +150,8 @@ relacionando  intensidade (X) e concentração (Y), com identificação de amost
 calibração e validação. O objetivo aqui foi observar tendências gerais antes de
  avançar para os modelos.
 
-{% for i in range(bloco_filtrado.graficos_elementos | length) %}
-{% set g = bloco_filtrado.graficos_elementos[i] %}
+{% for i in range(bloco_completo.graficos_elementos | length) %}
+{% set g = bloco_completo.graficos_elementos[i] %}
 #figure(
   image("{{ g.nome }}", width: 70%),
   caption: [Scatter de {{ g.elemento }} (base filtrada). Arquivo: {{ g.nome }}],
@@ -259,10 +250,8 @@ fica evidente a presença de um ponto discrepante que influencia o ajuste de for
   caption: [Regressão linear simples de V com conjunto completo. Arquivo: {{ bloco_completo.regressao.grafico }}],
 )
 
-
-Ao retirar as amostras 32 e 20 (conforme definido na etapa de filtragem), observa-se melhora visual
-do ajuste sobre o conjunto de calibração. Abaixo estão o gráfico da regressão filtrada e o gráfico
-de resíduos correspondente.
+Olhando para este gráfico, a amostra 32 parece evidentemente um outlier, a exclusão dela produz
+um gráfico com melhor ajuste e mais adequado:
 
 #figure(
   image("{{ bloco_filtrado.regressao.grafico }}", width: 78%),
@@ -273,6 +262,8 @@ de resíduos correspondente.
   image("{{ bloco_filtrado.regressao.grafico_residuos }}", width: 78%),
   caption: [Resíduos da regressão linear simples de V (filtrado), com convenção Y - Ŷ. Arquivo: {{ bloco_filtrado.regressao.grafico_residuos }}],
 )
+
+A análise de ANOVA gerou os seguintes resultados:
 
 #strong[ANOVA da regressão linear (filtrado)]
 {% for t in bloco_filtrado.regressao.tabelas %}
@@ -286,6 +277,8 @@ Em termos de interpretação, as siglas da ANOVA representam:
 - GL: graus de liberdade;
 - MQ: média quadrática (SQ/GL);
 - F: estatística F do teste global da regressão.
+
+
 
 Mesmo com a melhora do ajuste em calibração após a exclusão dos pontos discrepantes, ainda fica
 evidente que o desempenho preditivo para o conjunto de validação real não é satisfatório. Isso pode
