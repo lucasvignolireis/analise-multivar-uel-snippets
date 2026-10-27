@@ -89,7 +89,7 @@ segue uma descrição da árvore de arquivos:
     #set text(size: 8pt)
 
 #codly(number-format: none)
-```Estrutura de arquivos
+```estrutura_pasta
 .
 ├── app_atividade_resolvida.py       ──> Arquivo principal que representa a App, importando todos os outros arquivos
 ├── atividade_resolvida
@@ -111,8 +111,15 @@ segue uma descrição da árvore de arquivos:
 ```
 ]
 
-E para se ter uma ideia geral de como que é a estrutura da aplicação, uma olhadinha no arquivo app_atividade_resolvida.py:
+E para se ter uma ideia geral de como que é a estrutura da aplicação, uma olhadinha no arquivo `app_atividade_resolvida.py`:
 
+#block[
+    #set text(size: 8pt)
+#codly(number-format: n => str(n + 119))
+```python
+{{ source("app_atividade_resolvida.py", 10, 50) }}
+```
+]
 
 
 
