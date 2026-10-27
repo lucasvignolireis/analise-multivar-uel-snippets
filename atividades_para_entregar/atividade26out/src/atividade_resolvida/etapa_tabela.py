@@ -708,19 +708,36 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 "pca_ordem": PCA_KEYS,
             }
 
-            nome_typ = "relatorio.typ"
-            nome_pdf = "relatorio.pdf"
-            caminho_typ = pasta_saida / nome_typ
-            caminho_pdf = pasta_saida / nome_pdf
+            nome_typ_bruto = "relatorio.typ"
+            nome_pdf_bruto = "relatorio.pdf"
+            caminho_typ_bruto = pasta_saida / nome_typ_bruto
+            caminho_pdf_bruto = pasta_saida / nome_pdf_bruto
 
-            conteudo_typ = renderizar_relatorio_typst(
+            conteudo_typ_bruto = renderizar_relatorio_typst(
                 contexto_typst,
                 template_name="template_relatorio.typ.j2",
             )
-            caminho_typ.write_text(conteudo_typ, encoding="utf-8")
+            caminho_typ_bruto.write_text(conteudo_typ_bruto, encoding="utf-8")
 
             subprocess.run(
-                ["typst", "compile", str(caminho_typ), str(caminho_pdf)],
+                ["typst", "compile", str(caminho_typ_bruto), str(caminho_pdf_bruto)],
+                check=True,
+                cwd=str(pasta_saida),
+            )
+
+            nome_typ_final = "relatorio_final.typ"
+            nome_pdf_final = "relatorio_final.pdf"
+            caminho_typ_final = pasta_saida / nome_typ_final
+            caminho_pdf_final = pasta_saida / nome_pdf_final
+
+            conteudo_typ_final = renderizar_relatorio_typst(
+                contexto_typst,
+                template_name="template_relatorio_final.typ.j2",
+            )
+            caminho_typ_final.write_text(conteudo_typ_final, encoding="utf-8")
+
+            subprocess.run(
+                ["typst", "compile", str(caminho_typ_final), str(caminho_pdf_final)],
                 check=True,
                 cwd=str(pasta_saida),
             )
@@ -734,9 +751,14 @@ def etapa_tabela_server(input, output, session, *, estado_wizard):
                 arquivos.extend(b["regressao"].get("arquivos", []))
                 arquivos.extend(b["pls"].get("arquivos", []))
 
-            d_rel["typ_path"] = str(caminho_typ)
-            d_rel["pdf_path"] = str(caminho_pdf)
-            d_rel["arquivos"] = arquivos + [nome_typ, nome_pdf]
+            d_rel["typ_path"] = str(caminho_typ_bruto)
+            d_rel["pdf_path"] = str(caminho_pdf_bruto)
+            d_rel["typ_final_path"] = str(caminho_typ_final)
+            d_rel["pdf_final_path"] = str(caminho_pdf_final)
+            d_rel["arquivos"] = arquivos + [
+                nome_typ_bruto, nome_pdf_bruto,
+                nome_typ_final, nome_pdf_final
+            ]
 
             s["passos"]["tabela"]["estado"] = "preenchido"
             s["passos"]["relatorio"]["estado"] = "preenchido"

@@ -1,0 +1,137 @@
+{% macro tabela_typ(t, tamanho) %}
+#text(size: {{ tamanho }}pt)[
+  #table(
+    columns: {{ t.colunas | length }},
+    inset: 2.5pt,
+    stroke: 0.4pt + luma(180),
+    fill: (_, y) => if y == 0 { luma(225) } else if calc.odd(y) { luma(247) },
+    table.header(
+      {% for col in t.colunas %}{{ col | typ }},{% endfor %}
+    ),
+    {% for linha in t.linhas %}{% for v in linha %}{{ v | typ }},{% endfor %}
+    {% endfor %}
+  )
+]
+{% endmacro %}
+
+#import "@preview/codly:1.3.0": *
+#show: codly-init.with()
+#show table.cell.where(y: 0): strong
+
+#set page(margin: (x: 2.5cm, y: 2.3cm), numbering: "1")
+#set text(lang: "pt", size: 11pt)
+#set par(justify: true)
+#show heading.where(level: 1): it => block(above: 1.6em, below: 0.9em, it)
+
+#align(center)[
+  #v(4em)
+  #text(18pt, weight: "bold")[Quantificação de ligas de aço ferramenta por EDXRF]
+  #v(1.4em)
+  #text(12pt)[Relatório final (versão parcial)]
+  #v(3em)
+  #text(11pt)[Lucas Vignoli Reis]
+  #v(0.8em)
+  #text(10pt)[2FIS 461 — Sensores Espectroscópicos e Análise Multivariada de Dados]
+  #v(0.5em)
+  #text(10pt)[Prof. Fábio Luiz Melquiades]
+  #v(0.5em)
+  #text(10pt)[#datetime.today().display("[day]/[month]/[year]")]
+]
+#pagebreak()
+
+#outline(title: "Sumário", depth: 2)
+#pagebreak()
+
+= Introdução
+
+Este trabalho apresenta uma análise de dados espectroscópicos obtidos no contexto da quantificação de ligas de aço ferramenta por EDXRF, com foco no elemento vanádio. O conjunto utilizado combina dados de calibração e de validação: as amostras de calibração foram simuladas, enquanto as amostras de validação correspondem a amostras reais com valores de referência previamente estabelecidos por metodologia laboratorial.
+
+A proposta deste relatório é descrever, de forma organizada, o caminho adotado para investigar o comportamento dos dados e construir modelos de predição. Para isso, o trabalho foi dividido em três frentes complementares: uma análise exploratória inicial, uma etapa de regressão linear simples e, por fim, uma etapa de regressão multivariada por PLS. Em cada etapa, o objetivo não foi apenas obter números de ajuste, mas interpretar os resultados e comparar o que cada abordagem revela sobre os dados.
+
+Nesta versão parcial do relatório final, a ênfase está no início da análise: contextualização dos dados, visão exploratória e discussão dos resultados de PCA que orientaram as decisões seguintes.
+
+= Ferramentas e abordagem utilizadas
+
+Do ponto de vista de ferramentas, foi utilizado R de forma pontual, apenas para uma etapa inicial de agregação e padronização dos arquivos CSV. Após essa preparação, toda a análise foi conduzida em Python, utilizando bibliotecas voltadas para manipulação de dados, modelagem estatística e geração de gráficos.
+
+Em vez de seguir uma abordagem tradicional em notebook, foi desenvolvido um pequeno aplicativo em Shiny for Python para organizar o fluxo de trabalho. A ideia foi usar um formato de wizard em três etapas: primeiro, escolher os arquivos CSV de entrada; depois, visualizar os dados carregados e configurar as análises; por fim, gerar os relatórios automaticamente. Essa estrutura ajudou a tornar o processo reprodutível, já que as escolhas feitas na interface são aplicadas de forma consistente a cada nova execução.
+
+Além disso, a etapa de relatório foi integrada ao próprio fluxo de análise, usando Typst para composição dos PDFs. O Typst foi escolhido por permitir boa qualidade tipográfica com uma sintaxe mais direta. Com essa abordagem, cada execução do wizard passa a regenerar os relatórios, reduzindo trabalho manual e evitando inconsistências entre resultados e texto.
+
+Ao longo do desenvolvimento, o GitHub Copilot foi utilizado como apoio para montar a estrutura inicial de partes do código, com revisão e ajustes manuais em seguida. Na prática, o processo foi iterativo: primeiro foram gerados muitos gráficos e saídas intermediárias, depois foi feita a seleção do que era mais relevante para a narrativa técnica do relatório final.
+
+Nesta implementação, são gerados dois tipos de relatório: um relatório bruto, com todos os gráficos intermediários e resultados de apoio, e um relatório final resumido, com foco em interpretação e discussão. O documento atual corresponde a esse segundo tipo, ainda em versão parcial.
+
+= Resultados e comentários
+
+== Carregamento dos dados
+
+Os dados foram carregados em quatro conjuntos principais: intensidades de calibração e validação (Xcalib e Xvalid), além das respectivas concentrações de referência (Ycalib e Yvalid). As tabelas completas carregadas no processo estão apresentadas no Anexo A.
+
+Também foi implementado um mecanismo de exclusão de amostras no conjunto de calibração, para permitir comparar os resultados com e sem pontos potencialmente discrepantes. Nesta versão, as amostras excluídas foram: #strong[
+{{ amostras_excluir_calib | join(", ") if amostras_excluir_calib else "nenhuma" }}
+].
+
+Essa escolha foi motivada pela inspeção visual inicial, discutida na seção seguinte.
+
+== Análise exploratória
+
+=== Gráficos simples por elemento
+
+Como primeiro passo, foram gerados gráficos de dispersão por elemento químico, relacionando intensidade (X) e concentração (Y), com identificação de amostras de calibração e validação. O objetivo aqui foi observar tendências gerais antes de avançar para os modelos.
+
+{% for i in range(bloco_filtrado.graficos_elementos | length) %}
+{% set g = bloco_filtrado.graficos_elementos[i] %}
+#figure(
+  image("{{ g.nome }}", width: 70%),
+  caption: [Scatter de {{ g.elemento }} (base filtrada). Arquivo: {{ g.nome }}],
+)
+{% endfor %}
+
+De modo geral, os gráficos sugerem comportamento aproximadamente linear em todos os elementos, o que dá suporte inicial ao uso tanto de regressão linear simples quanto de PLS. Esse ponto é importante porque indica que, mesmo havendo ruídos e dispersões diferentes entre conjuntos, existe uma relação de primeira ordem que pode ser explorada pelos modelos.
+
+Ao mesmo tempo, alguns sinais de atenção apareceram logo nessa etapa. No vanádio, há um ponto claramente discrepante (C32), e no tungstênio há um ponto (C20) que, embora menos extremo visualmente, também pode influenciar o ajuste quando comparado ao agrupamento principal. Essa leitura inicial justificou a decisão de manter uma análise comparativa entre conjunto completo e conjunto filtrado.
+
+Outro aspecto que chamou atenção foi a separação aparente entre calibração e validação em quase todos os elementos (com exceção parcial de W): em vez de uma nuvem única, os pontos frequentemente se distribuem em faixas distintas. Isso não invalida a análise, mas sinaliza que pode haver diferenças sistemáticas entre os dois conjuntos, o que precisa ser considerado na interpretação dos resultados preditivos.
+
+== Análise PCA
+
+A PCA foi utilizada como ferramenta de análise exploratória multivariada para avaliar estrutura global, agrupamentos e possíveis direções de variação dominante. Foram testadas diferentes configurações, combinando centragem na média, uso ou não de autoescalonamento, variação do número de componentes principais e opção de agregar dados de validação ao ajuste.
+
+Entre as alternativas testadas, a configuração que mostrou padrões mais informativos para esta etapa foi: centragem na média, sem autoescalonamento, 2 PCs e com agregação de dados de calibração e validação.
+
+{% set p = bloco_filtrado.pca_analises["c"] %}
+#figure(
+  image("{{ p.variancia }}", width: 72%),
+  caption: [PCA C (filtrado): variância explicada. Arquivo: {{ p.variancia }}],
+)
+{% if p.scores %}
+#figure(
+  image("{{ p.scores }}", width: 72%),
+  caption: [PCA C (filtrado): scores. Arquivo: {{ p.scores }}],
+)
+{% endif %}
+#figure(
+  image("{{ p.loadings }}", width: 72%),
+  caption: [PCA C (filtrado): loadings. Arquivo: {{ p.loadings }}],
+)
+
+A leitura dos scores indica uma separação perceptível entre grupos associados à calibração e à validação, com uma fronteira aproximada em torno de uma faixa de PC2. Além disso, a nuvem de calibração ocupa uma região mais ampla do espaço de componentes, sugerindo maior cobertura de variabilidade quando comparada ao conjunto de validação.
+
+Essa divergência pode ser interpretada, nesta fase, como resultado combinado de diferentes fatores. O primeiro é a própria origem dos dados: calibração simulada versus validação experimental, o que naturalmente pode introduzir deslocamentos sistemáticos entre distribuições. O segundo é a cobertura composicional: mesmo quando ambos os conjuntos tratam dos mesmos elementos, as combinações e dispersões podem não ocupar a mesma “região” multivariada. O terceiro fator é tamanho amostral: com poucos dados de validação, fica mais difícil mapear e corrigir diferenças estruturais entre conjuntos.
+
+Em termos práticos, essa leitura da PCA funciona como um diagnóstico inicial: os modelos de regressão podem ser viáveis, mas os resultados devem ser interpretados com cuidado, especialmente nas métricas de validação e na discussão de exatidão.
+
+#pagebreak()
+
+= Anexos
+
+== Anexo A — resumo das tabelas carregadas
+
+{% for t in tabelas %}
+=== {{ t.titulo }}
+#text(size: 8pt)[
+  Arquivo: {{ t.path | typ }}. Exibindo {{ t.n_exibidas }} de {{ t.n_linhas }} linhas.
+]
+{{ tabela_typ(t, 6.5) }}
+{% endfor %}
