@@ -112,6 +112,10 @@ Cada gráfico aparece em sequência: versão completa e versão filtrada.
 
 = Regressão linear simples ({{ bloco_completo.regressao.elemento }})
 
+#text(size: 9pt, style: "italic")[
+Convenção de resíduo nesta seção: resíduo = Y - Ŷ
+]
+
 #figure(
   image("{{ bloco_completo.regressao.grafico }}", width: 80%),
   caption: [Completo. Arquivo: {{ bloco_completo.regressao.grafico }}],
@@ -123,11 +127,11 @@ Cada gráfico aparece em sequência: versão completa e versão filtrada.
 
 #figure(
   image("{{ bloco_completo.regressao.grafico_residuos }}", width: 80%),
-  caption: [Resíduos completo. Arquivo: {{ bloco_completo.regressao.grafico_residuos }}],
+  caption: [Resíduos completo (Y - Ŷ). Arquivo: {{ bloco_completo.regressao.grafico_residuos }}],
 )
 #figure(
   image("{{ bloco_filtrado.regressao.grafico_residuos }}", width: 80%),
-  caption: [Resíduos filtrado. Arquivo: {{ bloco_filtrado.regressao.grafico_residuos }}],
+  caption: [Resíduos filtrado (Y - Ŷ). Arquivo: {{ bloco_filtrado.regressao.grafico_residuos }}],
 )
 
 {% for t in bloco_completo.regressao.tabelas %}
@@ -142,6 +146,10 @@ Cada gráfico aparece em sequência: versão completa e versão filtrada.
 #pagebreak()
 
 = Regressão PLS ({{ bloco_completo.pls.elemento }})
+
+#text(size: 9pt, style: "italic")[
+Convenção de resíduo nesta seção: resíduo = Ŷ - Y
+]
 
 #figure(
   image("{{ bloco_completo.pls.grafico_variancia }}", width: 80%),
@@ -163,11 +171,11 @@ Cada gráfico aparece em sequência: versão completa e versão filtrada.
 
 #figure(
   image("{{ bloco_completo.pls.grafico_residuos }}", width: 100%),
-  caption: [Resíduos completo. Arquivo: {{ bloco_completo.pls.grafico_residuos }}],
+  caption: [Resíduos completo (Ŷ - Y). Arquivo: {{ bloco_completo.pls.grafico_residuos }}],
 )
 #figure(
   image("{{ bloco_filtrado.pls.grafico_residuos }}", width: 100%),
-  caption: [Resíduos filtrado. Arquivo: {{ bloco_filtrado.pls.grafico_residuos }}],
+  caption: [Resíduos filtrado (Ŷ - Y). Arquivo: {{ bloco_filtrado.pls.grafico_residuos }}],
 )
 
 {% for t in bloco_completo.pls.tabelas %}
