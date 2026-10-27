@@ -310,29 +310,36 @@ inadequada como modelo preditivo, por isso seria necessário buscar outros model
 
 == Regressão PLS para o Vanádio
 
-Como, j o conjunto filtrado, foi ajustado um modelo PLS para o vanádio usando pré-processamento com
-centragem na média e autoescalonamento, conforme configurado na etapa de análise.
+Para fazer a regressão PLS, tomei o conjunto de dados filtrados, sem a amostra outlier, que
+claramente foi possível identificar já na etapa de regressão linear, dada a discrepância bem
+evidente. Para determinar a quantidade de variáveis latentes a serem utilizadas, fiz o gráfico
+da variância explicada acumulada de acordo com a quantidade de LVs, apresentado à seguir:
 
 #figure(
   image("{{ bloco_filtrado.pls.grafico_variancia }}", width: 78%),
   caption: [PLS de V (filtrado): variância explicada acumulada. Arquivo: {{ bloco_filtrado.pls.grafico_variancia }}],
 )
 
+A quantidade escolhida foi de 4 LVs, vendo que até 4 LVs, a variância cumulativa explicada
+do X aumenta significativamente passo a passo, até atingir 99.8% para 4 variáveis. Depois olhando
+para as figuras de mérito do PLS confirmo a seguir a validade de se usar as 4 LVs.
+
+O gráfico a seguir mostra como a regressão PLS do Vanádio:
+
 #figure(
   image("{{ bloco_filtrado.pls.grafico_medido_previsto }}", width: 78%),
   caption: [PLS de V (filtrado): medido versus previsto. Arquivo: {{ bloco_filtrado.pls.grafico_medido_previsto }}],
 )
+
+Olhando para o gráfico de resíduos abaixo, observa-se, que apesar da qualidade de predição
+ser menor quando comparado com os dados validados, ainda assim mostra uma certa capacidade preditiva.
 
 #figure(
   image("{{ bloco_filtrado.pls.grafico_residuos }}", width: 100%),
   caption: [PLS de V (filtrado): resíduos com convenção Ŷ - Y. Arquivo: {{ bloco_filtrado.pls.grafico_residuos }}],
 )
 
-Nesta comparação, o PLS apresenta resultado superior ao da regressão linear simples para o objetivo
-de predição no conjunto de validação. Uma interpretação plausível é que o modelo multivariado consegue
-aproveitar melhor a estrutura conjunta dos sinais e reduzir efeitos de interferência entre elementos.
-
-Abaixo, seguem as principais tabelas de avaliação do modelo PLS filtrado:
+e observando as figuras de mérito vemos que:
 
 {% for t in bloco_filtrado.pls.tabelas %}
 {% if t.titulo == "Figuras de mérito do modelo PLS" %}
@@ -341,12 +348,16 @@ Abaixo, seguem as principais tabelas de avaliação do modelo PLS filtrado:
 {% endif %}
 {% endfor %}
 
-{% for t in bloco_filtrado.pls.tabelas %}
-{% if t.titulo == "Testes de exatidão (95%)" %}
-#strong[{{ t.titulo }} (filtrado)]
-{{ tabela_typ(t, 8) }}
-{% endif %}
-{% endfor %}
+O R² para a calibração fica em 0.995 e para validação 0.9391, significamente menor, porém ainda
+mostra alguma qualidade preditiva. O RMSEC vs RMSEP ficou em 0.06 vs 0.18, uma certa piora, porém
+ainda mostrando qualidade preditiva. E o RDP 4.35, representando que a dispersão dos valores 
+é 4.35 vezes maior que o erro típico de previsão do modelo, em geral isso seria um sinal de boa qualidade
+dos dados, mas também é reflexo da quantidade muito pequena de amostras no conjunto de validação, que estão
+bem dispersas. Pois a dispersão poderia ser resultado de um erro de medida das amostras de validação.
+
+
+E por fim temos a tabela de comparação da Validação, comparando os valores certificados com os
+valores medidos:
 
 {% for t in bloco_filtrado.pls.tabelas %}
 {% if t.titulo == "Validação: certificado vs previsto" %}
@@ -355,10 +366,17 @@ Abaixo, seguem as principais tabelas de avaliação do modelo PLS filtrado:
 {% endif %}
 {% endfor %}
 
+Que está indicando uma capacidade preditiva razoável, mas com desvios que chegam até a 20%.
+
 #pagebreak()
 = Conclusão
 
-Lorem ipsum por enquanto.
+Evidencia-se que para esse conjunto de dados apenas o PLS consegue entregar um modelo
+preditivo razoável quando comparado com a regressão linear simples, porém ainda assim, 
+tem um erro ainda considerável, podendo chegar nos 20%, mas tipicamente bem menor.
+
+Com mais dados certificados, e talvez mais simulações talvez fosse possível obter resultados
+ainda melhores.
 
 
 #pagebreak()
