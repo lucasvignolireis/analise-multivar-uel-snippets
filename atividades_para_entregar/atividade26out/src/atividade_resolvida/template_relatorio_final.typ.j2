@@ -35,7 +35,7 @@
   #v(0.5em)
   #text(10pt)[Prof. Fábio Luiz Melquiades]
   #v(0.5em)
-  #text(10pt)[#datetime.today().display("[day]/[month]/[year]")]
+  #text(10pt)[27/10/2026]
 ]
 #pagebreak()
 
@@ -44,23 +44,78 @@
 
 = Introdução
 
-Este trabalho apresenta uma análise de dados espectroscópicos obtidos no contexto da quantificação de ligas de aço ferramenta por EDXRF, com foco no elemento vanádio. O conjunto utilizado combina dados de calibração e de validação: as amostras de calibração foram simuladas, enquanto as amostras de validação correspondem a amostras reais com valores de referência previamente estabelecidos por metodologia laboratorial.
+Este trabalho apresenta uma análise de dados espectroscópicos obtidos no contexto da quantificação de 
+ligas de aço ferramenta por EDXRF, com foco no elemento vanádio. O conjunto utilizado combina dados 
+de calibração e de validação: as amostras de calibração foram simuladas pelo software XMI-MSIM, enquanto 
+as amostras de validação correspondem a amostras reais com valores de referência obtidos por análises
+laboriais ICP-AES
 
-A proposta deste relatório é descrever, de forma organizada, o caminho adotado para investigar o comportamento dos dados e construir modelos de predição. Para isso, o trabalho foi dividido em três frentes complementares: uma análise exploratória inicial, uma etapa de regressão linear simples e, por fim, uma etapa de regressão multivariada por PLS. Em cada etapa, o objetivo não foi apenas obter números de ajuste, mas interpretar os resultados e comparar o que cada abordagem revela sobre os dados.
+A proposta deste relatório é descrever, de forma organizada, o caminho adotado para investigar 
+o comportamento dos dados e construir modelos de predição, apresentar os resultados e comentá-los 
+Para isso, o trabalho foi dividido em  três frentes complementares: uma análise exploratória inicial, 
+uma etapa de regressão linear simples e, por fim, uma etapa de regressão multivariada por PLS.
 
-Nesta versão parcial do relatório final, a ênfase está no início da análise: contextualização dos dados, visão exploratória e discussão dos resultados de PCA que orientaram as decisões seguintes.
 
 = Ferramentas e abordagem utilizadas
 
-Do ponto de vista de ferramentas, foi utilizado R de forma pontual, apenas para uma etapa inicial de agregação e padronização dos arquivos CSV. Após essa preparação, toda a análise foi conduzida em Python, utilizando bibliotecas voltadas para manipulação de dados, modelagem estatística e geração de gráficos.
+Para uma formatação inicial dos dados, foi utilizado o R de forma pontual, agregando as várias planilhas
+específicas de cada elemento em uma tabela consolidada, para facilitar a análise.
 
-Em vez de seguir uma abordagem tradicional em notebook, foi desenvolvido um pequeno aplicativo em Shiny for Python para organizar o fluxo de trabalho. A ideia foi usar um formato de wizard em três etapas: primeiro, escolher os arquivos CSV de entrada; depois, visualizar os dados carregados e configurar as análises; por fim, gerar os relatórios automaticamente. Essa estrutura ajudou a tornar o processo reprodutível, já que as escolhas feitas na interface são aplicadas de forma consistente a cada nova execução.
+Aproveitei, para ao invés de usar um notebook Jupyter ou o Rstudio (para Python), para aprender a usar o
+framework Shiny for Pyhton, que permite gerar dashboards especializados de analise de dados, que podem
+ser acessados e comandados por um navegador WEB. A ideia é que ao gerar uma bateria de resultados os 
+parâmetros e as tabelas e gráficos gerados ficam registrados. Foi bem interessante, e serviu para aprender
+a usar o Shiny, mas com certeza adicionou bastante tempo ao projeto.
 
-Além disso, a etapa de relatório foi integrada ao próprio fluxo de análise, usando Typst para composição dos PDFs. O Typst foi escolhido por permitir boa qualidade tipográfica com uma sintaxe mais direta. Com essa abordagem, cada execução do wizard passa a regenerar os relatórios, reduzindo trabalho manual e evitando inconsistências entre resultados e texto.
+Além disso, para o relatório final, usei o Typst, que é um sistema de typesetting, que a grosso modo é um
+sucessor mais moderno do LaTeX, mais simples de usar e que tem um arquivo fonte mais compreensível.
 
-Ao longo do desenvolvimento, o GitHub Copilot foi utilizado como apoio para montar a estrutura inicial de partes do código, com revisão e ajustes manuais em seguida. Na prática, o processo foi iterativo: primeiro foram gerados muitos gráficos e saídas intermediárias, depois foi feita a seleção do que era mais relevante para a narrativa técnica do relatório final.
+O dashboard criado está estruturado como um wizard de 3 etapas: 1. Escolher os CSVs que vão ser carregados
+de dentro de uma pasta de dados. 2. Conferência dos dados e escolha de parâmetros pras análises. 
+3. Visualizar os relatórios gerados (um bruto com todos os gráfico, e outro, este aqui, com comentários
+e análise)
 
-Nesta implementação, são gerados dois tipos de relatório: um relatório bruto, com todos os gráficos intermediários e resultados de apoio, e um relatório final resumido, com foco em interpretação e discussão. O documento atual corresponde a esse segundo tipo, ainda em versão parcial.
+Ao longo do desenvolvimento, o GitHub Copilot foi utilizado como apoio para montar a estrutura inicial 
+de partes do código, com revisão e ajustes manuais em seguida. Na prática, o processo foi iterativo: 
+primeiro foram gerados muitos gráficos e saídas intermediárias, depois foi feita a seleção do que era 
+mais relevante para a narrativa técnica do relatório final.
+
+== O código fonte
+
+Boa parte do código é para fazer a página WEB que comanda as análises, para se ter uma ideia dessa estrutura,
+segue uma descrição da árvore de arquivos:
+
+#block[
+    #set text(size: 8pt)
+
+#codly(number-format: none)
+```Estrutura de arquivos
+.
+├── app_atividade_resolvida.py       ──> Arquivo principal que representa a App, importando todos os outros arquivos
+├── atividade_resolvida
+│   ├── estado_wizard.py             ──> Parâmetros iniciais para todas as análises
+│   ├── etapa_carregamento.py        ──> Interface para escolha dos CSVs que vão ser usados
+│   ├── etapa_relatorio.py           ──> Interface para a etapa de mostrar os relatórios gerados e fazer o download deles
+│   ├── etapa_tabela.py              ──> Interface onde se pode configurar os parâmetros para a análise
+│   ├── grafico_visualizacao_inicial_dados.py  ──> Análise exploratória, gráficos simples
+│   ├── pca_analise.py               ──> Código das análises PCA
+│   ├── pls_analise.py               ──> Código usado para as regressões PLS
+│   ├── regressao_simples.py         ──> Código usado para a regressão linear simples
+│   ├── relatorio_typst.py           ──> Código que comanda o Typst para gerar um relatório com os dados e gráficos gerados
+│   ├── template_relatorio_final.typ.j2 ──> Template deste relatório aqui
+│   └── template_relatorio.typ.j2    ──> Template de um relatório bruto, com TODOS os gráficos gerados
+├── outputs                          ──> Nessa pasta, os gráficos e relatórios gerados são salvos
+│   └── 2026-10-22-12-04             ──> Cada vez que gera uma nova análise, uma pasta é criada
+│       └── ...                      ──> Cada vez que gera uma nova análise, uma pasta é criada
+└── preparacao_csvs.R                ──> Código que foi usado para consolidar os CSVs
+```
+]
+
+E para se ter uma ideia geral de como que é a estrutura da aplicação, uma olhadinha no arquivo app_atividade_resolvida.py:
+
+
+
+
 
 = Resultados e comentários
 
