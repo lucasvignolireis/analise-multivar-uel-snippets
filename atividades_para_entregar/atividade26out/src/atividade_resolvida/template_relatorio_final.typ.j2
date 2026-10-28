@@ -391,3 +391,77 @@ ainda melhores.
 ]
 {{ tabela_typ(t, 6.5) }}
 {% endfor %}
+
+#pagebreak()
+
+== Anexo B — Códigos de gráficos e análises
+
+=== B.1 — `atividade_resolvida/grafico_visualizacao_inicial_dados.py`
+
+Este módulo gera os gráficos de visualização inicial dos dados X vs Y. Ele constrói um scatter geral com todos os elementos e também gráficos separados por elemento, com identificação das amostras de calibração e validação nos pontos. As bibliotecas usadas são `matplotlib` (plotagem) e `pandas` (manipulação tabular).
+
+#block[
+  #set text(size: 7pt)
+  #codly(number-format: n => str(n))
+  ```python
+{{ source("atividade_resolvida/grafico_visualizacao_inicial_dados.py") }}
+  ```
+]
+
+#pagebreak()
+
+=== B.2 — `atividade_resolvida/pca_analise.py`
+
+Este módulo executa a análise de componentes principais (PCA) para os conjuntos de calibração e validação. Ele inclui pré-processamento (centragem e autoescalonamento), cálculo de variância explicada, geração de scores e loadings, além de tabelas com autovalores e componentes. As bibliotecas usadas são `numpy`, `matplotlib` e `scikit-learn` (`sklearn.decomposition.PCA`).
+
+#block[
+  #set text(size: 7pt)
+  #codly(number-format: n => str(n))
+  ```python
+{{ source("atividade_resolvida/pca_analise.py") }}
+  ```
+]
+
+#pagebreak()
+
+=== B.3 — `atividade_resolvida/regressao_simples.py`
+
+Este módulo implementa regressão linear simples por elemento entre intensidade (X) e concentração (Y). Ele calcula parâmetros da reta, resíduos, RMSEC/RMSEP, tabela ANOVA do ajuste em calibração e gera gráficos de regressão e de resíduos para calibração/validação. As bibliotecas usadas são `numpy` e `matplotlib`.
+
+#block[
+  #set text(size: 7pt)
+  #codly(number-format: n => str(n))
+  ```python
+{{ source("atividade_resolvida/regressao_simples.py") }}
+  ```
+]
+
+#pagebreak()
+
+=== B.4 — `atividade_resolvida/pls_analise.py`
+
+Este módulo implementa regressão PLS (Partial Least Squares) por elemento, com opção de agregação calibração+validação no ajuste e pré-processamento (centragem/autoescalonamento). Ele calcula variância explicada acumulada em X e Y, métricas de desempenho (R², RMSEC, RMSEP, bias, SEP, RPD), testes estatísticos de exatidão e gráficos de medido vs previsto e resíduos. As bibliotecas usadas são `numpy`, `matplotlib`, `scipy.stats` e `scikit-learn` (`sklearn.cross_decomposition.PLSRegression`).
+
+#block[
+  #set text(size: 7pt)
+  #codly(number-format: n => str(n))
+  ```python
+{{ source("atividade_resolvida/pls_analise.py") }}
+  ```
+]
+
+#pagebreak()
+
+== Anexo C — Estado inicial do wizard
+
+=== C.1 — `atividade_resolvida/estado_wizard.py`
+
+Este módulo define o estado inicial da aplicação wizard, incluindo ordem das etapas, dados padrão de carregamento de arquivos, parâmetros iniciais de análises (PCA/PLS), elemento analisado e estado do relatório. Ele organiza o estado reativo consumido pelos módulos de interface e processamento. Não depende de bibliotecas externas.
+
+#block[
+  #set text(size: 7pt)
+  #codly(number-format: n => str(n))
+  ```python
+{{ source("atividade_resolvida/estado_wizard.py") }}
+  ```
+]
